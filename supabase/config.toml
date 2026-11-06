@@ -1,0 +1,13 @@
+# Minimal Supabase CLI config for deploying Skope's edge functions.
+project_id = "zgsenoktxhovmwpwiesi"
+
+# These functions are called from emails and the public website without a login,
+# so JWT verification is off. They validate their own input and tokens.
+[functions.subscribe]
+verify_jwt = false
+
+[functions.confirm]
+verify_jwt = false
+
+[functions.unsubscribe]
+verify_jwt = false

@@ -1,0 +1,13 @@
+{
+  "name": "skope-reports",
+  "private": true,
+  "type": "module",
+  "description": "Weekly / monthly Skope portfolio report emails",
+  "scripts": {
+    "send": "node send-reports.mjs",
+    "test": "node test-local.mjs"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2"
+  }
+}

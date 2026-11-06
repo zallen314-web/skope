@@ -250,6 +250,8 @@ canvas{width:100%!important;display:block;}
 .subtabs{margin-top:6px;}
 .fs-note{background:transparent;border-left:2px solid var(--border);border-radius:0;padding:2px 0 2px 12px;}
 .id-actions{display:flex;gap:8px;flex-shrink:0;}
+.pi-h{font-size:12px;font-weight:600;color:var(--text2);margin:2px 0 8px;}.pi-note{font-size:11px;color:var(--text3);font-weight:400;}.pi-p{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px;}.pi-ul{margin:0 0 4px 16px;}
+.pi-row{display:grid;grid-template-columns:150px 1fr 56px;gap:10px;align-items:center;padding:4px 0;border-bottom:1px solid var(--border2);font-size:12.5px;}.pi-l{color:var(--text2);}.pi-l.b{font-weight:600;color:var(--text);}.pi-bar{height:8px;}.pi-bar i{display:block;height:8px;border-radius:1px;opacity:.85;}.pi-v{text-align:right;font-variant-numeric:tabular-nums;}
 .app-foot{margin-top:36px;padding:18px 0 4px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3);line-height:1.7;}.app-foot a,.intro-foot a{color:var(--text2);text-decoration:underline;}.intro-foot{line-height:1.8;}.ff-upd{cursor:pointer;text-decoration:underline;color:var(--text2);}
 </style>
 </head>
@@ -394,6 +396,13 @@ canvas{width:100%!important;display:block;}
         </div>
         <button class="run-btn" id="p-runBtn" onclick="runPortfolio()" style="width:100%">Run Portfolio Analysis</button>
         <div class="status-bar" style="margin-top:10px;margin-bottom:0"><div class="sdot" id="p-dot"></div><span id="p-status">Set weights and click Run</span></div>
+      </div>
+      <div class="card" style="margin-top:14px"><div class="card-title">Email reports</div>
+        <p style="font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:10px">Get this portfolio's exposures, risk, concentration and what changed, delivered by email. Uses the holdings and benchmark above.</p>
+        <input type="email" id="sub-email" class="api-input" placeholder="you@example.com" style="width:100%;margin-bottom:8px;background:#fff" onkeydown="if(event.key==='Enter')subscribeReports()">
+        <div style="display:flex;gap:8px"><select id="sub-freq" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 8px;font-family:inherit;font-size:12.5px"><option value="weekly">Weekly (Mondays)</option><option value="monthly">Monthly</option></select><button class="run-btn" id="sub-btn" onclick="subscribeReports()" style="white-space:nowrap">Email me reports</button></div>
+        <div id="sub-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.5">You'll get a confirmation email first. Every report has an unsubscribe link.</div>
       </div>
       <div class="wl-panel" style="position:static;margin-top:14px">
         <div class="wl-hdr"><span class="wl-ttl">Coverage List</span><span style="font-size:10px;color:var(--text3)">click + to add</span></div>
@@ -14824,6 +14833,59 @@ function invM(M){const n=M.length;const a=M.map((r,i)=>[...r,...Array(n).fill(0)
 function nCDF(z){const t=1/(1+0.2316419*z),p=t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return 1-(1/Math.sqrt(2*Math.PI))*Math.exp(-0.5*z*z)*p;}
 function dStat(rets,annF=252){const n=rets.length,m=rets.reduce((a,b)=>a+b,0)/n,v=rets.reduce((a,b)=>a+(b-m)**2,0)/(n-1),std=Math.sqrt(v);const sk=rets.reduce((a,b)=>a+((b-m)/std)**3,0)/n,ku=rets.reduce((a,b)=>a+((b-m)/std)**4,0)/n-3;let pk=1,nv=1,mdd=0;for(const r of rets){nv*=(1+r);if(nv>pk)pk=nv;const d=(nv-pk)/pk;if(d<mdd)mdd=d;}const am=Math.pow(rets.reduce((a,b)=>a*(1+b),1),annF/n)-1;const sorted=[...rets].sort((a,b)=>a-b);const var95=sorted[Math.floor(n*0.05)]||0,cvar95=sorted.slice(0,Math.floor(n*0.05)).reduce((a,b)=>a+b,0)/Math.floor(n*0.05)||0;return{mean:m,std,annMean:am,annStd:std*Math.sqrt(annF),sharpe:am/(std*Math.sqrt(annF)),maxDD:mdd,skew:sk,kurt:ku,n,var95,cvar95};}
 function pct(v,d=2){return(v*100).toFixed(d)+'%';}
+// ── Portfolio insights, email reports, report links (v-reports) ───────────────
+const SKOPE_API='https://zgsenoktxhovmwpwiesi.supabase.co/functions/v1';
+const P_FLABEL={'Mkt-RF':'Market',SMB:'Size (SMB)',HML:'Value (HML)',RMW:'Profitability (RMW)',CMA:'Investment (CMA)',MOM:'Momentum (MOM)',QMJ:'Quality (QMJ)',BAB:'Low-beta (BAB)'};
+function portInsightsHTML(P){
+  const {weights,model,result:r,annF,factors,bench}=P,fn=FN[model],mn=a=>a.reduce((s,x)=>s+x,0)/a.length;
+  const fm=v=>`${v>=0?'+':'−'}${Math.abs(v*100).toFixed(1)}%`;
+  // where returns came from: beta x factor average, annualized; alpha is the rest
+  const attr=fn.map((n,i)=>({n,c:r.betas[i]*mn(factors[i])*annF}));attr.push({n:'Alpha (stock selection)',c:r.alpha*annF,a:true});
+  const mx=Math.max(...attr.map(a=>Math.abs(a.c)),1e-6);
+  const attrRows=attr.map(a=>`<div class="pi-row"><span class="pi-l${a.a?' b':''}">${P_FLABEL[a.n]||a.n}</span><span class="pi-bar"><i style="width:${Math.max(2,Math.abs(a.c)/mx*100)}%;background:${a.c>=0?'var(--accent)':'var(--red)'}"></i></span><span class="pi-v ${a.c>=0?'pos':'neg'}">${fm(a.c)}</span></div>`).join('');
+  // risk + concentration
+  const mb=r.betas[0],ws=weights.map(w=>w.w).sort((a,b)=>b-a),effN=1/weights.reduce((s,w)=>s+w.w*w.w,0);
+  // drift vs the last time this exact portfolio + model was run in this browser
+  const key='skope_port_hist',hk=model+'|'+weights.map(w=>w.ticker+':'+(w.w*100).toFixed(1)).join(',');
+  let hist={};try{hist=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+  const prev=hist[hk],chg=[];
+  if(prev){fn.forEach((n,i)=>{const p=prev.b[i];if(p!=null&&Math.abs(r.betas[i]-p)>=0.1)chg.push(`${P_FLABEL[n]||n} exposure ${r.betas[i]>p?'rose':'fell'} from ${p.toFixed(2)} to ${r.betas[i].toFixed(2)}`);});}
+  try{hist[hk]={b:r.betas,d:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})};localStorage.setItem(key,JSON.stringify(hist));}catch(e){}
+  const drift=!prev?`First run of this portfolio in this browser. Next time, Skope will show what changed.`:chg.length?`<ul class="pi-ul">${chg.map(c=>`<li>${c}</li>`).join('')}</ul><span class="pi-note">Since ${prev.d}.</span>`:`No meaningful change in exposures since ${prev.d}.`;
+  return `<div class="card"><div class="card-title">Portfolio insights · ${ML[model]}</div>
+    <div class="two-col" style="margin-bottom:0">
+      <div><div class="pi-h">Where your returns came from <span class="pi-note">(annualized, above cash)</span></div>${attrRows}
+        <div class="pi-note" style="margin-top:6px">Each factor's beta × its average return over the period. Factors explain ${(r.r2*100).toFixed(0)}% of return variation.</div></div>
+      <div><div class="pi-h">Risk</div><p class="pi-p">If the market falls 10%, a market beta of <b>${mb.toFixed(2)}</b> implies roughly a <b>${(mb*10).toFixed(1)}%</b> drop.</p>
+        <div class="pi-h">Concentration</div><p class="pi-p">Largest holding <b>${(ws[0]*100).toFixed(1)}%</b> · top 3 <b>${(ws.slice(0,3).reduce((s,x)=>s+x,0)*100).toFixed(1)}%</b> · effectively <b>${effN.toFixed(1)}</b> holdings of ${weights.length}.</p>
+        <div class="pi-h">What changed</div><div class="pi-p">${drift}</div></div>
+    </div></div>`;
+}
+async function subscribeReports(){
+  const msg=document.getElementById('sub-msg'),btn=document.getElementById('sub-btn'),show=(t,bad)=>{msg.textContent=t;msg.style.color=bad?'var(--red)':'var(--green)';};
+  const email=document.getElementById('sub-email').value.trim(),frequency=document.getElementById('sub-freq').value,benchmark=document.getElementById('p-bench').value;
+  const holdings=portfolioRows.filter(r=>r.weight>0).map(r=>({ticker:r.ticker,weight:r.weight})),tot=holdings.reduce((s,h)=>s+h.weight,0);
+  if(!holdings.length)return show('Add holdings and weights above first.',1);
+  if(holdings.length>15)return show('Reports support up to 15 holdings.',1);
+  if(Math.abs(tot-100)>0.5)return show(`Weights add up to ${tot.toFixed(1)}%. They need to total 100%.`,1);
+  if(!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email))return show('Enter a valid email address.',1);
+  btn.disabled=true;show('Sending…');msg.style.color='var(--text3)';
+  try{const r=await fetch(`${SKOPE_API}/subscribe`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,frequency,benchmark,holdings})});
+    const d=await r.json().catch(()=>({}));if(!r.ok||d.error)show(d.error||'Something went wrong. Please try again.',1);else show(d.message||'Check your inbox to confirm.');}
+  catch(e){show('Could not reach the report service. Please try again.',1);}
+  btn.disabled=false;
+}
+function loadPortfolioFromLink(){
+  try{const q=new URLSearchParams(location.search),p=q.get('p');if(!p)return;
+    const rows=p.split(',').map(x=>{const[t,w]=x.split(':');return{ticker:(t||'').toUpperCase().trim(),name:(t||'').toUpperCase().trim(),weight:parseFloat(w)||0};}).filter(r=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(r.ticker)&&r.weight>0);
+    if(!rows.length)return;portfolioRows=rows;savePort();renderWeightRows();updateWeightBar();
+    const b=q.get('b');if(['SPY','QQQ','IWM'].includes(b))document.getElementById('p-bench').value=b;
+    const m=document.getElementById('p-model');if(m)m.value='ff5mom';const f=document.getElementById('p-freq');if(f)f.value='monthly';
+    showApp();switchTab('portfolio');toast('Loaded the portfolio from your report. Click Run to see the full analysis.');
+    history.replaceState(null,'',location.pathname);}catch(e){console.warn(e);}
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(loadPortfolioFromLink,50));
+
 // ── PDF report (jsPDF + autoTable, built in the browser) ──────────────────────
 function pdfSafe(t){return String(t??'').replace(/β/g,'beta').replace(/α/g,'alpha').replace(/[−–]/g,'-').replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/→/g,'->').replace(/≈/g,'~').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/✓/g,'').replace(/[^\x00-\xFF•—·²%]/g,'');}
 function downloadReport(){
@@ -15233,6 +15295,7 @@ async function runPortfolio(){
     const benchRets=(isD?benchData.daily:benchData.monthly).map(r=>r.ret);const benchSt=dStat(benchRets,annF);
     upP('reg','ok',`${result.n} obs · R²=${(result.r2*100).toFixed(1)}%`);
     setS('p',`Portfolio · R²=${(result.r2*100).toFixed(1)}% · α=${pct(result.alpha*annF)}${stars(result.alphaPVal)}`,'done');
+    window.LAST_PORT={weights,model,result,annF,factors:Xm2[model],bench,freq};
     renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchRets,annF,!ffData,freq,bench);
   }catch(e){setS('p','Error: '+e.message,'error');document.getElementById('p-output').innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Error</div><p style="font-family:inherit;font-size:12px;color:var(--red)">${e.message}</p></div>`;}
   document.getElementById('p-runBtn').disabled=false;
@@ -15245,6 +15308,7 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
   const ir=(st.annMean-benchSt.annMean)/te;
   document.getElementById('p-output').innerHTML=`
     ${proxy?`<div class="warn">⚠ French factors unavailable — SPY proxy used.</div>`:''}
+    ${window.LAST_PORT&&!proxy?portInsightsHTML(window.LAST_PORT):''}
     <div class="card"><div class="card-title">Allocation</div>
       <div class="donut-wrap">
         <canvas id="p-donut" width="150" height="150" style="width:150px!important;height:150px!important;flex-shrink:0"></canvas>
