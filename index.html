@@ -15079,7 +15079,10 @@ function setSubTab(name){
 // ── Filing highlights: latest earnings release + 10-K risk factors, quoted from SEC filings ──
 async function fetchHighlights(ticker){
   if(typeof DEMO!=='undefined'&&DEMO)return null;
-  try{const r=await fetch(`${SKOPE_API}/highlights?ticker=${encodeURIComponent(ticker)}`);const j=await r.json();return j&&j.ok?j.data:null;}catch(e){return null;}
+  // pre-built daily from SEC filings for the largest ~700 companies and every subscriber holding
+  try{const r=await fetch(`data/highlights/${encodeURIComponent(ticker.replace('.','-'))}.json`,{cache:'no-cache'});if(r.ok){const d=await r.json();if(d&&(d.earnings||d.risks))return d;}}catch(e){}
+  // other tickers: live lookup (best effort)
+  try{const r=await fetch(`${SKOPE_API}/highlights?ticker=${encodeURIComponent(ticker)}`);const j=await r.json();return j&&j.ok&&(j.data.earnings||j.data.risks)?j.data:null;}catch(e){return null;}
 }
 const escH=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fDate=d=>d?new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';

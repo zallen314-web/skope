@@ -141,7 +141,19 @@ export async function earningsRelease(cik: number, f: Filing, fetcher = fetch) {
 }
 
 export async function getHighlights(cik: number, fetcher = fetch) {
-  const fl = await recentFilings(cik, fetcher);
+  return getHighlightsFrom(cik, await recentFilings(cik, fetcher), fetcher);
+}
+export async function riskFactors(cik: number, f: Filing, fetcher = fetch) {
+  return parseRisks(await get(filingUrl(cik, f), fetcher, 'text'));
+}
+// Latest earnings 8-K and latest 10-K from a filing list (falls back to a predecessor company for the 10-K)
+export async function latestKeyFilings(cik: number, fl: Filing[], fetcher = fetch) {
+  const earn = fl.find(f => f.form === '8-K' && f.items.includes('2.02'));
+  let tenK = fl.find(f => f.form === '10-K' || f.form === '10-K405'), kCik = cik;
+  if (!tenK && PREDECESSOR[cik]) { kCik = PREDECESSOR[cik]; tenK = (await recentFilings(kCik, fetcher)).find(f => f.form === '10-K'); }
+  return { earn, tenK, kCik };
+}
+export async function getHighlightsFrom(cik: number, fl: Filing[], fetcher = fetch) {
   const earn = fl.find(f => f.form === '8-K' && f.items.includes('2.02'));
   let tenK = fl.find(f => f.form === '10-K' || f.form === '10-K405'), kCik = cik;
   if (!tenK && PREDECESSOR[cik]) { kCik = PREDECESSOR[cik]; tenK = (await recentFilings(kCik, fetcher)).find(f => f.form === '10-K'); }
