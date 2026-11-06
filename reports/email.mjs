@@ -83,10 +83,10 @@ export function buildEmail(m, { siteUrl, unsubscribeUrl, ffThrough, headlines = 
     <p style="margin:0;font:400 14px/1.6 ${SANS};color:${INK}">Volatility <b>${pcu(m.vol)}</b>/yr &nbsp;·&nbsp; Worst drawdown <b>${pcu(m.maxDD)}</b> &nbsp;·&nbsp; Tracking error vs ${esc(m.benchmark)} <b>${pcu(m.trackingError)}</b> &nbsp;·&nbsp; Return <b>${pc(m.annReturn)}</b>/yr vs ${esc(m.benchmark)} <b>${pc(m.benchAnnReturn)}</b>/yr</p>`)}
   ${section('Concentration', conc)}
   ${section('Holdings', `<table width="100%" cellpadding="0" cellspacing="0"><tr>${th('Ticker')}${th('Weight', 1)}${th('This ' + per, 1)}${th('Beta', 1)}${th('Main tilt', 1)}</tr>${hRows}</table>`)}
-  ${headlinesHTML(headlines, per)}
   <tr><td style="padding:24px 32px 28px;border-top:1px solid ${RULE}" align="left">
     <a href="${openUrl}" style="display:inline-block;background:${G};color:#fff;text-decoration:none;font:600 14px ${SANS};padding:11px 20px;border-radius:4px">Open the full analysis in Skope</a>
   </td></tr>
+  ${headlinesHTML(headlines, per)}
   <tr><td style="padding:16px 32px 24px;background:#fafbfa;border-top:1px solid ${RULE};font:400 11px/1.6 ${SANS};color:${MUT}">
     Prices: Twelve Data. Factors: Kenneth R. French Data Library, released monthly with a lag (data through ${esc(ffThrough)}). Portfolio assumes constant weights rebalanced monthly.
     Skope is for informational and educational purposes only and is not investment advice.<br>
