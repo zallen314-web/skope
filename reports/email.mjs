@@ -17,7 +17,30 @@ function section(title, inner) {
 const td = (v, o = {}) => `<td style="padding:6px 0;border-bottom:1px solid #eef0ee;font:${o.bold ? 600 : 400} 13px ${SANS};color:${o.color || INK};text-align:${o.right ? 'right' : 'left'}">${v}</td>`;
 const th = (v, right) => `<td style="padding:4px 0 6px;border-bottom:1px solid ${RULE};font:600 11px ${SANS};color:${MUT};text-align:${right ? 'right' : 'left'}">${v}</td>`;
 
-export function buildEmail(m, { siteUrl, unsubscribeUrl, ffThrough }) {
+// Highlights: new SEC filings (with earnings numbers and guidance) and news headlines per holding
+function highlightsHTML(H, per, hasNews) {
+  if (!H) return '';
+  const fd = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const link = (u, t) => `<a href="${esc(u)}" style="color:${G};text-decoration:none">${t}</a>`;
+  const li = t => `<li style="margin:0 0 4px">${t}</li>`;
+  const rows = H.filter(h => h.events.length || h.earnings || h.news.length).map(h => {
+    let x = `<div style="margin:0 0 16px"><div style="font:600 15px ${SERIF};color:${INK};margin-bottom:4px">${esc(h.ticker)}</div><ul style="margin:0;padding-left:18px;font:400 13px/1.55 ${SANS};color:${INK}">`;
+    for (const e of h.events) x += li(`${link(e.url, esc(e.label))} <span style="color:${MUT}">· ${fd(e.date)}</span>`);
+    x += '</ul>';
+    if (h.earnings) {
+      const e = h.earnings;
+      if (e.highlights.length) x += `<div style="font:600 12px ${SANS};color:${MUT};margin:8px 0 3px">Reported</div><ul style="margin:0;padding-left:18px;font:400 13px/1.55 ${SANS};color:${INK}">${e.highlights.map(t => li(esc(t))).join('')}</ul>`;
+      if (e.outlook.length) x += `<div style="font:600 12px ${SANS};color:${MUT};margin:8px 0 3px">Guidance</div><ul style="margin:0;padding-left:18px;font:400 13px/1.55 ${SANS};color:${INK}">${e.outlook.map(t => li(esc(t))).join('')}</ul>`;
+    }
+    if (h.news.length) x += `<div style="font:600 12px ${SANS};color:${MUT};margin:8px 0 3px">In the news</div><ul style="margin:0;padding-left:18px;font:400 13px/1.55 ${SANS};color:${INK}">${h.news.map(n => li(`${link(n.url, esc(n.headline))} <span style="color:${MUT}">· ${esc(n.source)}, ${fd(n.date)}</span>`)).join('')}</ul>`;
+    return x + '</div>';
+  });
+  const note = `<p style="margin:4px 0 0;font:400 11px ${SANS};color:${MUT}">Filings from SEC EDGAR; earnings figures and guidance quoted from the company's release${hasNews ? '; headlines via Finnhub' : ''}.</p>`;
+  return section('Highlights', rows.length ? rows.join('') + note
+    : `<p style="margin:0;font:400 14px/1.6 ${SANS};color:${INK}">No new SEC filings${hasNews ? ' or news' : ''} from your holdings this ${per}.</p>`);
+}
+
+export function buildEmail(m, { siteUrl, unsubscribeUrl, ffThrough, highlights = null, hasNews = false }) {
   const per = m.frequency === 'monthly' ? 'month' : 'week';
   const dateTxt = new Date(m.asOf + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const head = m.label.words.charAt(0).toUpperCase() + m.label.words.slice(1);
@@ -62,6 +85,7 @@ export function buildEmail(m, { siteUrl, unsubscribeUrl, ffThrough }) {
     <div style="font:400 20px/1.35 ${SERIF};color:${INK};margin-top:16px">${esc(head)} portfolio, ${alphaTxt}.</div>
     <div style="font:400 12px ${SANS};color:${MUT};margin-top:6px">Based on ${m.n} months of returns (${m.firstMonth.slice(4)}/${m.firstMonth.slice(0, 4)} to ${m.lastMonth.slice(4)}/${m.lastMonth.slice(0, 4)}), Fama-French five factors plus momentum.</div>
   </td></tr>
+  ${highlightsHTML(highlights, per, hasNews)}
   ${section('What changed', changes)}
   ${section('Your exposures', `<table width="100%" cellpadding="0" cellspacing="0"><tr>${th('Factor')}${th('You', 1)}${th(esc(m.benchmark), 1)}${th('Difference', 1)}</tr>${expRows}</table>
     <p style="margin:8px 0 0;font:400 11px ${SANS};color:${MUT}">Bold = statistically significant at 5%. Large differences from ${esc(m.benchmark)} are what make your returns behave differently from the index.</p>`)}

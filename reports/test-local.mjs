@@ -52,5 +52,7 @@ const sumAttr = m1.attribution.reduce((s, a) => s + a.contrib, 0);
 console.log('Attribution sums to', (sumAttr * 100).toFixed(2) + '%/yr');
 mkdirSync('out', { recursive: true });
 const opts = { siteUrl: 'https://skoperesearch.com/', unsubscribeUrl: 'https://example/unsubscribe', ffThrough: 'September 30, 2026' };
-writeFileSync('out/test_first.html', buildEmail(m1, opts)); writeFileSync('out/test_second.html', buildEmail(m2, opts));
+const { filingHighlights } = await import('./news.mjs');
+const hl = await filingHighlights(['AAPL','MSFT','AMZN','XOM'], new Date(Date.now()-14*864e5).toISOString().slice(0,10));
+writeFileSync('out/test_first.html', buildEmail(m1, { ...opts, highlights: hl })); writeFileSync('out/test_second.html', buildEmail(m2, opts));
 console.log('Subject:', buildSubject(m2));
