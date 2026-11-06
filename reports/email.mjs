@@ -10,8 +10,8 @@ const pcu = (v, d = 1) => (v == null || !isFinite(v) ? '—' : `${v < 0 ? '−' 
 const sgn = (v, d = 2) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(d)}`;
 const col = v => (v == null ? INK : v >= 0 ? POS : NEG);
 
-function section(title, inner) {
-  return `<tr><td style="padding:22px 32px 4px;border-top:1px solid ${RULE}">
+function section(title, inner, extra = '') {
+  return `<tr><td style="padding:22px 32px 4px;border-top:1px solid ${RULE};${extra}">
     <div style="font:600 11px ${SANS};letter-spacing:.08em;text-transform:uppercase;color:${MUT};margin-bottom:10px">${title}</div>${inner}</td></tr>`;
 }
 const td = (v, o = {}) => `<td style="padding:6px 0;border-bottom:1px solid #eef0ee;font:${o.bold ? 600 : 400} 13px ${SANS};color:${o.color || INK};text-align:${o.right ? 'right' : 'left'}">${v}</td>`;
@@ -25,7 +25,8 @@ function headlinesHTML(H, per) {
     <ul style="margin:0;padding-left:18px;font:400 13px/1.55 ${SANS};color:${INK}">${h.news.map(n => `<li style="margin:0 0 5px"><a href="${esc(n.url)}" style="color:${G};text-decoration:none">${esc(n.headline)}</a> <span style="color:${MUT}">· ${esc(n.source)}, ${fd(n.date)}</span></li>`).join('')}</ul></div>`);
   return section('Headlines', rows.length
     ? rows.join('') + `<p style="margin:4px 0 0;font:400 11px ${SANS};color:${MUT}">Recent headlines for each holding, via Finnhub. Links open the original articles.</p>`
-    : `<p style="margin:0;font:400 14px/1.6 ${SANS};color:${INK}">No major headlines for your holdings this ${per}.</p>`);
+    : `<p style="margin:0;font:400 14px/1.6 ${SANS};color:${INK}">No major headlines for your holdings this ${per}.</p>`,
+    'page-break-before:always;break-before:page');   // printed: headlines get their own page
 }
 
 export function buildEmail(m, { siteUrl, unsubscribeUrl, ffThrough, headlines = null }) {

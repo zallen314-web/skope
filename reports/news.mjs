@@ -66,7 +66,7 @@ export async function addNews(highlights, since, today) {
       if (!r.ok) { console.warn(`news ${h.ticker}: HTTP ${r.status}`); continue; }
       const seen = new Set();
       h.news = (await r.json()).filter(n => n.headline && n.url && !seen.has(n.headline.toLowerCase()) && seen.add(n.headline.toLowerCase()))
-        .sort((a, b) => b.datetime - a.datetime).slice(0, 3)
+        .sort((a, b) => b.datetime - a.datetime).slice(0, highlights.length > 4 ? 2 : 3)
         .map(n => ({ headline: n.headline, source: n.source, url: n.url, date: new Date(n.datetime * 1000).toISOString().slice(0, 10) }));
     } catch (e) { console.warn(`news ${h.ticker}: ${e.message}`); }
     await sleep(1100);   // free tier: 60 requests a minute
