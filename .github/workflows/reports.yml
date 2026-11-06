@@ -43,6 +43,9 @@ jobs:
           FORCE: ${{ github.event.inputs.force }}
           DRY: ${{ github.event.inputs.dry_run }}
         run: |
+          for v in SUPABASE_SERVICE_ROLE_KEY TWELVEDATA_API_KEY RESEND_API_KEY EMAIL_FROM; do
+            if [ -n "${!v}" ]; then echo "secret $v: set"; else echo "secret $v: MISSING"; fi
+          done
           if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "Secrets not set yet - skipping."; exit 0; fi
           ARGS=""
           [ -n "$ONLY" ] && ARGS="$ARGS --only=$ONLY"
