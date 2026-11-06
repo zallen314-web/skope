@@ -21,4 +21,4 @@ jobs:
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
             echo "SUPABASE_ACCESS_TOKEN secret not set yet - skipping deploy."; exit 0
           fi
-          supabase functions deploy --project-ref zgsenoktxhovmwpwiesi --no-verify-jwt
+          supabase functions deploy --project-ref zgsenoktxhovmwpwiesi --no-verify-jwt --yes
