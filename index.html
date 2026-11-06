@@ -276,6 +276,11 @@ canvas{width:100%!important;display:block;}
 .pi-row{display:grid;grid-template-columns:150px 1fr 56px;gap:10px;align-items:center;padding:4px 0;border-bottom:1px solid var(--border2);font-size:12.5px;}.pi-l{color:var(--text2);}.pi-l.b{font-weight:600;color:var(--text);}.pi-bar{height:8px;}.pi-bar i{display:block;height:8px;border-radius:1px;opacity:.85;}.pi-v{text-align:right;font-variant-numeric:tabular-nums;}
 .app-foot{margin-top:36px;padding:18px 0 4px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3);line-height:1.7;}.app-foot a,.intro-foot a{color:var(--text2);text-decoration:underline;}.intro-foot{line-height:1.8;}.ff-upd{cursor:pointer;text-decoration:underline;color:var(--text2);}
 .notice-wrap{position:fixed;inset:0;background:rgba(20,30,25,.35);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
+.live-try{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:18px;font-size:14px;color:rgba(255,255,255,.82);}
+.live-try input{width:96px;padding:7px 10px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.08);color:#fff;border-radius:4px;font:600 14px 'Source Sans 3',sans-serif;text-transform:uppercase;}
+.live-try input::placeholder{color:rgba(255,255,255,.45);}.live-try input:focus{outline:none;border-color:#fff;background:rgba(255,255,255,.14);}
+.live-try button{padding:7px 14px;border:0;border-radius:4px;background:#fff;color:var(--accent);font:600 14px 'Source Sans 3',sans-serif;cursor:pointer;}.live-try button:disabled{opacity:.6;cursor:default;}
+.live-msg{flex-basis:100%;font-size:13px;min-height:0;color:#fff;}.live-msg a{color:#fff;}
 .intro-signin{color:#fff;text-decoration:none;font-weight:600;border:1px solid rgba(255,255,255,.55);border-radius:999px;padding:4px 12px;margin-right:4px;}.intro-signin:hover{background:rgba(255,255,255,.1);}
 .pf-row{display:flex;gap:8px;padding:0 16px 12px;}.pf-row select{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:inherit;font-size:12.5px;}
 .notice.wide{max-width:600px;max-height:88vh;overflow:auto;}
@@ -301,6 +306,7 @@ canvas{width:100%!important;display:block;}
     <h2>Look closer at your portfolio.</h2>
     <p>Understand what drives your returns, how much risk you carry, and how each holding is valued. Skope will keep you updated and send weekly reports directly to your inbox.</p>
     <button class="intro-cta" onclick="startApp()">Start here</button><button class="intro-cta ghost" onclick="runDemo()">See an example</button>
+    <form class="live-try" onsubmit="runLive(this.t.value);return false;"><label for="live-t">Or try it on a real stock:</label><input id="live-t" name="t" placeholder="AAPL" maxlength="10" autocomplete="off" spellcheck="false"><button type="submit" id="live-btn">Analyze</button><span class="live-msg" id="live-msg"></span></form>
   </div></section>
 
   <section class="intro-sec"><div class="intro-inner">
@@ -364,6 +370,7 @@ canvas{width:100%!important;display:block;}
 </div>
 
 <!-- INDIVIDUAL -->
+<div id="live-banner" class="demo-banner" style="display:none"><div><b>Live example.</b> Real market data and SEC filings for <b id="live-tk"></b>, run on Skope's own data key as your one free analysis. Add your own free Twelve Data key (top right) to analyze any US stock or ETF, as often as you like.</div><button class="ghost-btn" onclick="exitLive()">Exit example</button></div>
 <div id="demo-banner" class="demo-banner" style="display:none"><div><b>Example mode.</b> <b>DEMO</b> is a simulated stock built from real Fama-French factor returns with known exposures (market β 0.75, SMB −0.35, HML +0.30, RMW +0.45, CMA +0.10, zero alpha), so you can see how Skope works and check that it recovers them. Prices and valuation figures are illustrative, not real. Add your own free Twelve Data key (top right) to analyze any US stock or ETF.</div><button class="ghost-btn" onclick="exitDemo()">Exit example</button></div>
 <div id="pane-single">
   <div class="ind-layout">
@@ -14482,6 +14489,7 @@ function demoSEC(){const c=demoSeries().map(x=>+x.close),last=c[c.length-1],mcap
     ebitdaTTM:(mcap+5e9)/11.2,dividendsTTM:mcap*0.021,revenueGrowth:0.06,earningsGrowth:0.13,revenueGrowthQ:0.07,epsTTM:+(last/18.2).toFixed(2),epsGrowth:0.14,equity:mcap/3.3,assets:ni/0.09,currentAssets:9e9,currentLiabilities:6e9,cash:3e9,debt:8e9,shares:mcap/last,isBank:false}};}
 window.fetch=async(url,opts)=>{const u=String(url);if(DEMO&&u.includes('/functions/v1/fundamentals'))return new Response(JSON.stringify(demoSEC()),{status:200,headers:{'Content-Type':'application/json'}});if(DEMO&&u.includes('api.twelvedata.com'))return new Response(JSON.stringify(demoResponse(u)),{status:200,headers:{'Content-Type':'application/json'}});return _realFetch(url,opts);};
 function runDemo(){
+  if(LIVE){LIVE=null;document.getElementById('live-banner').style.display='none';}
   DEMO=true;closeKeyPage();showApp();try{switchTab('single');}catch(e){}
   document.getElementById('demo-banner').style.display='flex';
   document.getElementById('s-ticker').value=DEMO_TICKER;document.getElementById('s-period').value='2520';
@@ -14496,8 +14504,37 @@ function exitDemo(){
   setS('s','Enter a ticker and click Run','');
 }
 
-function getApiKey(){return DEMO?'demo':(localStorage.getItem(KEY_KEY)||'');}
+function getApiKey(){return DEMO?'demo':LIVE?'live':(localStorage.getItem(KEY_KEY)||'');}
+
+// ── Live example: one real stock, run on Skope's own data key (server-capped) ──
+let LIVE=null;const LIVE_USED='skope_live_used';
+async function runLive(raw){
+  const t=String(raw||'').trim().toUpperCase(),msg=document.getElementById('live-msg'),btn=document.getElementById('live-btn');
+  if(!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(t)){msg.textContent='Enter a US ticker, like AAPL or SPY.';return;}
+  const go=()=>{showApp();try{switchTab('single');}catch(e){}document.getElementById('s-ticker').value=t;document.getElementById('s-period').value='1260';SUBTAB='summary';runSingle();};
+  if(localStorage.getItem(KEY_KEY)){DEMO=false;go();return;}                       // has a key already: just run it
+  const used=localStorage.getItem(LIVE_USED);
+  if(used&&used!==t){msg.innerHTML=`You've used your free live analysis (${escH(used)}). <a href="#" onclick="startApp();return false;">Add your free key</a> to analyze any stock.`;return;}
+  btn.disabled=true;msg.textContent='Loading real data…';
+  try{
+    const r=await fetch(`${SKOPE_API}/demo?ticker=${encodeURIComponent(t)}`);const j=await r.json();
+    if(!r.ok||!j.ok){msg.innerHTML=escH(j.error||'Something went wrong. Please try again.')+(j.limit?' <a href="#" onclick="startApp();return false;">Add a key</a>':'');btn.disabled=false;return;}
+    LIVE={ticker:t,series:j.series,quote:j.quote};localStorage.setItem(LIVE_USED,t);
+    if(DEMO)exitDemo();document.getElementById('live-tk').textContent=t;document.getElementById('live-banner').style.display='flex';
+    msg.textContent='';btn.disabled=false;go();
+  }catch(e){msg.textContent='Could not reach Skope right now. Please try again.';btn.disabled=false;}
+}
+function exitLive(){LIVE=null;document.getElementById('live-banner').style.display='none';exitDemo();}
+{const _pf=window.fetch;window.fetch=async(url,opts)=>{const u=String(url);
+  if(LIVE&&u.includes('api.twelvedata.com')){const q=new URL(u),sym=(q.searchParams.get('symbol')||'').toUpperCase();
+    const res=o=>new Response(JSON.stringify(o),{status:200,headers:{'Content-Type':'application/json'}});
+    if(sym!==LIVE.ticker)return res({status:'error',code:401,message:`The free live example covers ${LIVE.ticker}. Add your own free Twelve Data key (top right) to analyze other tickers.`});
+    if(q.pathname.includes('time_series')){const n=+q.searchParams.get('outputsize')||1260;return res({...LIVE.series,values:LIVE.series.values.slice(-n)});}
+    if(q.pathname.includes('quote'))return res(LIVE.quote);
+    return res({status:'error',message:'Not available in the live example.'});}
+  return _pf(url,opts);};}
 function saveApiKey(){
+  if(LIVE){LIVE=null;document.getElementById('live-banner').style.display='none';}
   const k=document.getElementById('api-key').value.trim();
   if(!k){toast('Please enter your API key');return;}
   localStorage.setItem(KEY_KEY,k);

@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.highlights]
 verify_jwt = false
+
+[functions.demo]
+verify_jwt = false
