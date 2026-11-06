@@ -118,9 +118,12 @@ export function computeFundamentals(cf: any) {
   }
   const opT = T('opIncome'), corT = T('costOfRevenue'), gpT0 = T('grossProfit'), ocfT = T('ocf'), capT = T('capex'), daT = T('da'), divT = T('dividends'), ptT = T('pretax'), intT = T('interest');
 
-  const inst = (k: keyof typeof C) => instant(S(k)?.list);
+  const inst = (k: keyof typeof C, at?: string) => instant(S(k)?.list, at);
   const eq = inst('equity'), assets = inst('assets'), ca = inst('curAssets'), cl = inst('curLiab'), cash = inst('cash');
   const ltd = inst('ltDebt'), std = inst('stDebt');
+  // the same figures as of one year earlier, for year-over-year comparisons
+  const opP = T('opIncome', yearAgo), ocfP = T('ocf', yearAgo), capP = T('capex', yearAgo), daP = T('da', yearAgo), corP = T('costOfRevenue', yearAgo), gpP0 = T('grossProfit', yearAgo);
+  const eqP = inst('equity', yearAgo), cashP = inst('cash', yearAgo), ltdP = inst('ltDebt', yearAgo), stdP = inst('stDebt', yearAgo);
 
   // shares outstanding: dei cover-page count (summed across share classes on the same date), else weighted diluted
   let shares: number | null = null;
@@ -162,6 +165,17 @@ export function computeFundamentals(cf: any) {
     operatingCashFlowTTM: v(ocfT), capexTTM: v(capT), freeCashFlowTTM: ocfT && !isBank ? ocfT.val - (v(capT) || 0) : null,
     ebitdaTTM: daT && !isBank ? (opT ? opT.val + daT.val : ptT ? ptT.val + (v(intT) || 0) + daT.val : null) : null, dividendsTTM: v(divT),
     revenueGrowth: growth(revT, revP), earningsGrowth: growth(niT, niP), revenueGrowthQ,
+    prev: (() => {
+      const near = (a: { end: string } | null, b: { end: string } | null) => !!a && !!b && Math.abs(days(a.end, b.end)) < 40;
+      const gp = gpP0 && near(gpP0, revP) ? gpP0.val : revP && corP && near(corP, revP) ? revP.val - corP.val : null;
+      return {
+        periodEnd: revP ? revP.end : niP ? niP.end : null,
+        revenueTTM: v(revP), netIncomeTTM: v(niP), operatingIncomeTTM: near(opP, revP) ? v(opP) : null, grossProfitTTM: gp,
+        freeCashFlowTTM: ocfP && !isBank ? ocfP.val - (v(capP) || 0) : null,
+        ebitdaTTM: daP && opP && !isBank ? opP.val + daP.val : null,
+        epsTTM: v(epsP), equity: v(eqP), cash: v(cashP), debt: ltdP || stdP ? (v(ltdP) || 0) + (v(stdP) || 0) : null,
+      };
+    })(),
     epsTTM: v(epsT), epsGrowth: epsT && epsP && epsP.val > 0 ? epsT.val / epsP.val - 1 : null,
     equity: v(eq), assets: v(assets), currentAssets: v(ca), currentLiabilities: v(cl), cash: v(cash), debt: ltd || std ? debt : null,
     shares, isBank,

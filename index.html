@@ -95,6 +95,7 @@ body{background:var(--bg);color:var(--text);font-family:'Source Sans 3',-apple-s
 .fund-value.rich{color:var(--text);}
 .fund-value.neutral{color:var(--text2);}
 .fund-sub{font-size:10.5px;color:var(--text3);line-height:1.4;}
+.fund-yoy{font-size:10.5px;color:var(--text2);margin-top:6px;font-variant-numeric:tabular-nums;}
 .fund-badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9.5px;font-family:inherit;font-weight:700;margin-top:4px;}
 .fund-badge.cheap{background:#e7f2ea;color:var(--green);}
 .fund-badge.fair{background:#eef0ed;color:var(--amber);}
@@ -14621,7 +14622,7 @@ async function fetchFundamentals(ticker) {
     const pe = f && pos(f.netIncomeTTM) ? div(mcap, f.netIncomeTTM) : null;
     const ev = mcap!=null ? mcap + (f.debt||0) - (f.cash||0) : null;
     const out = {
-      source: f ? 'SEC' : null, secDown: !!(sec && sec.error) || sec===null, demo: DEMO, periodEnd: f ? f.periodEnd : null, isBank: !!(f && f.isBank), noPrice: !!f && mcap==null,
+      _sec: f, source: f ? 'SEC' : null, secDown: !!(sec && sec.error) || sec===null, demo: DEMO, periodEnd: f ? f.periodEnd : null, isBank: !!(f && f.isBank), noPrice: !!f && mcap==null,
       // Valuation (live price × SEC trailing-twelve-month figures)
       trailingPE:      pe,
       pegRatio:        pe && f.earningsGrowth>0 ? pe/(f.earningsGrowth*100) : null,
@@ -14706,67 +14707,76 @@ function renderFundamentals(ticker, fund) {
   const fmtB = v => v!=null ? (v/1e9).toFixed(1)+'B' : '—';
   const badgeLabel = s => s==='cheap'?'Undervalued':s==='fair'?'Fair Value':s==='rich'?'Expensive':'N/A';
 
+  // Year-over-year comparison lines (no judgment, just the change)
+  const P0=fund.prev||{};
+  const yx=(cur,prev,d=1,u='x')=>cur!=null&&prev!=null&&isFinite(prev)?`1 yr ago: ${prev.toFixed(d)}${u}`:'';
+  const ypt=(cur,prev)=>{if(cur==null||prev==null||!isFinite(prev))return'';const d=(cur-prev)*100;return`${d>=0?'▲':'▼'} ${Math.abs(d).toFixed(1)} pts vs ${(prev*100).toFixed(1)}% a year ago`;};
+  const YOY={pe:yx(fund.trailingPE,P0.pe),fcf:yx(fund.fcfYield,P0.fcf!=null?P0.fcf*100:null,1,'%'),peg:'',ps:yx(fund.priceToSales,P0.ps),pb:yx(fund.priceToBook,P0.pb),ev:yx(fund.evToEbitda,P0.ev),
+    gross:ypt(fund.grossMargin,P0.gross),op:ypt(fund.operatingMargin,P0.op),net:ypt(fund.profitMargin,P0.net),roe:ypt(fund.roe,P0.roe),
+    eps:fund.eps!=null&&P0.eps!=null?`${P0.eps<=fund.eps?'▲':'▼'} from $${P0.eps.toFixed(2)} a year ago`:''};
+  const yoyLine=k=>YOY[k]?`<div class="fund-yoy">${YOY[k]}</div>`:'';
+
   // Build the 6 cards
   const cards = [];
 
   if(!isETF && hasValuation) {
     const pe=fund.trailingPE, peSig=peSignal(pe);
-    cards.push(`<div class="fund-card ${peSig}">
+    cards.push(`<div class="fund-card neutral">
       <div class="fund-label">P/E Ratio (TTM)</div>
-      <div class="fund-value ${peSig}">${fmt(pe,1)}<span style="font-size:14px;font-weight:400;color:var(--text3)">x</span></div>
-      <div class="fund-sub">Earnings multiple · S&P avg ~21x</div>
-      <span class="fund-badge ${peSig}">${badgeLabel(peSig)}</span>
+      <div class="fund-value">${fmt(pe,1)}<span style="font-size:14px;font-weight:400;color:var(--text3)">x</span></div>
+      <div class="fund-sub">Price ÷ trailing 12-month EPS</div>
+      ${yoyLine('pe')}
     </div>`);
 
     const fy=fund.fcfYield, fySig=fy==null?'neutral':fy>0.06?'cheap':fy>0.03?'fair':'rich';
-    cards.push(`<div class="fund-card ${fySig}">
+    cards.push(`<div class="fund-card neutral">
       <div class="fund-label">Free Cash Flow Yield</div>
-      <div class="fund-value ${fySig}">${fy!=null?(fy*100).toFixed(1):'—'}<span style="font-size:14px;font-weight:400;color:var(--text3)">%</span></div>
-      <div class="fund-sub">FCF ÷ market cap · &gt;6% cheap, &lt;3% expensive</div>
-      <span class="fund-badge ${fySig}">${badgeLabel(fySig)}</span>
+      <div class="fund-value">${fy!=null?(fy*100).toFixed(1):'—'}<span style="font-size:14px;font-weight:400;color:var(--text3)">%</span></div>
+      <div class="fund-sub">Free cash flow ÷ market cap</div>
+      ${yoyLine('fcf')}
     </div>`);
 
     const peg=fund.pegRatio, pegSig=pegSignal(peg);
-    cards.push(`<div class="fund-card ${pegSig}">
+    cards.push(`<div class="fund-card neutral">
       <div class="fund-label">PEG Ratio (trailing)</div>
-      <div class="fund-value ${pegSig}">${fmt(peg,2)}</div>
-      <div class="fund-sub">P/E ÷ last year's earnings growth · &lt;1 cheap</div>
-      <span class="fund-badge ${pegSig}">${badgeLabel(pegSig)}</span>
+      <div class="fund-value">${fmt(peg,2)}</div>
+      <div class="fund-sub">P/E ÷ last year's EPS growth</div>
+      ${yoyLine('peg')}
     </div>`);
 
     const ps=fund.priceToSales, psSig=psSignal(ps);
-    cards.push(`<div class="fund-card ${psSig}">
+    cards.push(`<div class="fund-card neutral">
       <div class="fund-label">Price / Sales (TTM)</div>
-      <div class="fund-value ${psSig}">${fmt(ps,1)}<span style="font-size:14px;font-weight:400;color:var(--text3)">x</span></div>
-      <div class="fund-sub">Revenue multiple · sector-dependent</div>
-      <span class="fund-badge ${psSig}">${badgeLabel(psSig)}</span>
+      <div class="fund-value">${fmt(ps,1)}<span style="font-size:14px;font-weight:400;color:var(--text3)">x</span></div>
+      <div class="fund-sub">Market cap ÷ trailing revenue</div>
+      ${yoyLine('ps')}
     </div>`);
 
     const pb=fund.priceToBook, pbSig=pbSignal(pb);
-    cards.push(`<div class="fund-card ${pbSig}">
+    cards.push(`<div class="fund-card neutral">
       <div class="fund-label">Price / Book</div>
-      <div class="fund-value ${pbSig}">${fmt(pb,1)}<span style="font-size:14px;font-weight:400;color:var(--text3)">x</span></div>
-      <div class="fund-sub">Asset multiple · &lt;1 below book value</div>
-      <span class="fund-badge ${pbSig}">${badgeLabel(pbSig)}</span>
+      <div class="fund-value">${fmt(pb,1)}<span style="font-size:14px;font-weight:400;color:var(--text3)">x</span></div>
+      <div class="fund-sub">Market cap ÷ shareholder equity</div>
+      ${yoyLine('pb')}
     </div>`);
 
     const ev=fund.evToEbitda, evSig=evEbSignal(ev);
-    cards.push(`<div class="fund-card ${evSig}">
+    cards.push(`<div class="fund-card neutral">
       <div class="fund-label">EV / EBITDA</div>
-      <div class="fund-value ${evSig}">${fmt(ev,1)}<span style="font-size:14px;font-weight:400;color:var(--text3)">x</span></div>
-      <div class="fund-sub">Debt-inclusive multiple · &lt;10 cheap</div>
-      <span class="fund-badge ${evSig}">${badgeLabel(evSig)}</span>
+      <div class="fund-value">${fmt(ev,1)}<span style="font-size:14px;font-weight:400;color:var(--text3)">x</span></div>
+      <div class="fund-sub">Enterprise value ÷ trailing EBITDA</div>
+      ${yoyLine('ev')}
     </div>`);
   }
 
   // 52-week range card (always shown)
   const wp=wkPosSignal(wkPos);
-  const rangeCard = wkPos!==null ? `<div class="fund-card ${wp}">
+  const rangeCard = wkPos!==null ? `<div class="fund-card neutral">
     <div class="fund-label">52-Week Position</div>
-    <div class="fund-value ${wp}">${wkPos!=null?wkPos.toFixed(0):'—'}<span style="font-size:14px;font-weight:400;color:var(--text3)">%ile</span></div>
+    <div class="fund-value">${wkPos!=null?wkPos.toFixed(0):'—'}<span style="font-size:14px;font-weight:400;color:var(--text3)">%ile</span></div>
     <div class="range-bar"><div class="range-fill" style="width:100%"></div><div class="range-dot" style="left:${wkPos}%"></div></div>
     <div class="range-labels"><span>$${fmt(fund.wk52Low,2)}</span><span>$${fmt(fund.wk52High,2)}</span></div>
-    <span class="fund-badge ${wp}">${wkPos<30?'Near 52W Low':wkPos>70?'Near 52W High':'Mid Range'}</span>
+    <span class="fund-badge neutral">${wkPos<30?'Near 52W Low':wkPos>70?'Near 52W High':'Mid Range'}</span>
   </div>` : '';
 
   // MA card (always shown if data available)
@@ -14783,24 +14793,25 @@ function renderFundamentals(ticker, fund) {
   // Quality summary row (for stocks)
   const fmtEps = v => v!=null ? (v<0?'−$':'$')+Math.abs(v).toFixed(2) : '—';
   const qItems = [
-    ['Gross Margin',fmtPct(fund.grossMargin),'Revenue left after cost of sales'],
-    ['Operating Margin',fmtPct(fund.operatingMargin),'Profit from operations'],
-    ['Net Margin',fmtPct(fund.profitMargin),'Earnings per dollar of revenue'],
-    ['ROE',fmtPct(fund.roe),'Net income ÷ shareholder equity'],
+    ['Gross Margin',fmtPct(fund.grossMargin),'Revenue left after cost of sales','gross'],
+    ['Operating Margin',fmtPct(fund.operatingMargin),'Profit from operations','op'],
+    ['Net Margin',fmtPct(fund.profitMargin),'Earnings per dollar of revenue','net'],
+    ['ROE',fmtPct(fund.roe),'Net income ÷ shareholder equity','roe'],
     ['Revenue Growth (YoY)',fmtPct(fund.revenueGrowthQ),'Latest quarter vs same quarter last year'],
     ['Revenue Growth (TTM)',fmtPct(fund.revenueGrowth),'Last 12 months vs prior 12'],
-    ['EPS (TTM)',fmtEps(fund.eps),'Diluted earnings per share'],
+    ['EPS (TTM)',fmtEps(fund.eps),'Diluted earnings per share','eps'],
     ['EPS Growth (TTM)',fmtPct(fund.epsGrowth),'Last 12 months vs prior 12'],
   ];
   const qualityHtml = (!isETF && (fund.profitMargin!=null||fund.revenueGrowth!=null)) ? `
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">Margins, Growth &amp; Earnings</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0">
-        ${qItems.map(([l,v,sub],k)=>`
+        ${qItems.map(([l,v,sub,yk],k)=>`
           <div style="padding:12px 16px;${k%4!==3?'border-right:1px solid var(--border2);':''}${k>=4?'border-top:1px solid var(--border2);':''}">
             <div style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px">${l}</div>
             <div style="font-family:'Source Serif 4',Georgia,serif;font-size:24px;font-weight:400;margin-bottom:2px;font-variant-numeric:lining-nums tabular-nums">${v}</div>
             <div style="font-size:10px;color:var(--text3)">${sub}</div>
+            ${yk?yoyLine(yk):''}
           </div>`).join('')}
       </div>
     </div>` : '';
@@ -15227,7 +15238,13 @@ async function runSingle(){
       fetchTwelvedata(ticker,outputsize),
       fetchFundamentals(ticker)
     ]);
-    if(fund&&stockData.closes){const c=stockData.closes,ma=n=>c.length>=n?c.slice(-n).reduce((a,b)=>a+b,0)/n:null;fund.ma50=ma(50);fund.ma200=ma(200);}
+    if(fund&&stockData.closes){const c=stockData.closes,ma=n=>c.length>=n?c.slice(-n).reduce((a,b)=>a+b,0)/n:null;fund.ma50=ma(50);fund.ma200=ma(200);
+      // year-ago ratios: price one year back with the SEC figures from a year earlier
+      const f=fund._sec,pv=f&&f.prev;
+      if(pv&&c.length>253){const p1=c[c.length-253],d=(a,b)=>a!=null&&b>0?a/b:null,m1=fund.marketCap!=null&&f.shares>0?p1*f.shares:null;
+        fund.prev={pe:fund.trailingPE!=null&&pv.epsTTM>0?p1/pv.epsTTM:null,ps:d(m1,pv.revenueTTM),pb:d(m1,pv.equity),fcf:m1&&pv.freeCashFlowTTM!=null?pv.freeCashFlowTTM/m1:null,
+          ev:m1!=null&&pv.ebitdaTTM>0?(m1+(pv.debt||0)-(pv.cash||0))/pv.ebitdaTTM:null,
+          gross:d(pv.grossProfitTTM,pv.revenueTTM),op:d(pv.operatingIncomeTTM,pv.revenueTTM),net:d(pv.netIncomeTTM,pv.revenueTTM),roe:d(pv.netIncomeTTM,pv.equity),eps:pv.epsTTM};}}
     const info={ticker,name:(fund&&fund.name)||stockData.name,exch:stockData.exchange,type:stockData.type,sector:''};
     curInfo=info;
     upP('price','ok',`${stockData.daily.length} obs · ${info.name||ticker}${info.exch?' · '+info.exch:''}`);
