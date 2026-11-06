@@ -286,7 +286,7 @@ canvas{width:100%!important;display:block;}
 .live-try.in-modal .live-msg{color:var(--text2);}.live-try.in-modal .live-msg a{color:var(--accent);}
 .live-msg{flex-basis:100%;font-size:13px;min-height:0;color:#fff;}.live-msg a{color:#fff;}
 .intro-signin{color:#fff;text-decoration:none;font-weight:600;border:1px solid rgba(255,255,255,.55);border-radius:999px;padding:4px 12px;margin-right:4px;}.intro-signin:hover{background:rgba(255,255,255,.1);}
-.pf-row{display:flex;gap:8px;padding:0 16px 12px;}.pf-row select{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:inherit;font-size:12.5px;}
+.pf-row{display:flex;gap:8px;padding:0 16px 12px;}.pf-del{color:var(--red)!important;}.pf-row select{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:inherit;font-size:12.5px;}
 .notice.wide{max-width:600px;max-height:88vh;overflow:auto;}
 .notice input[type=email]{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:4px;font:inherit;font-size:14px;margin:0 0 12px;}
 .acct-h{font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;margin:20px 0 8px;color:var(--text);}
@@ -418,7 +418,7 @@ canvas{width:100%!important;display:block;}
     <div>
       <div class="port-panel">
         <div class="port-hdr"><div class="port-title">Portfolio Builder</div><div class="port-sub">Weights must sum to 100%</div></div>
-        <div class="pf-row"><select id="pf-select" onchange="if(this.value)loadSavedPortfolio(this.value)"><option value="">Saved portfolios…</option></select><button class="ghost-btn" onclick="saveNamedPortfolio()">Save</button></div>
+        <div class="pf-row"><select id="pf-select" onchange="pfSelectChanged(this.value)"><option value="">Saved portfolios…</option></select><button class="ghost-btn" onclick="saveNamedPortfolio()">Save</button><button class="ghost-btn pf-del" id="pf-del" style="display:none" onclick="deleteSavedPortfolio(document.getElementById('pf-select').value)">Delete</button></div>
         <div id="weight-rows"><div class="wl-empty">Add tickers below or from Coverage List</div></div>
         <div class="add-row">
           <input class="add-input" id="p-add-input" placeholder="Type ticker..." onkeydown="if(event.key==='Enter')addWeightRow()">
@@ -15067,7 +15067,7 @@ function saveNamedPortfolio(){
   savePFs(l);
   // clean slate for the next portfolio (the saved one is in the dropdown)
   portfolioRows=[];savePort();renderWeightRows();updateWeightBar();
-  document.getElementById('pf-select').value='';
+  document.getElementById('pf-select').value='';document.getElementById('pf-del').style.display='none';
   document.getElementById('p-output').innerHTML='<div class="empty">Build portfolio on the left<br><div class="small">Add tickers · Set weights (sum to 100%) · Run</div></div>';
   window.LAST_PORT=null;
   toast(USER?`✓ Saved "${name}" to your account`:`✓ Saved "${name}" in this browser. Sign in to keep it on every device.`);
@@ -15075,8 +15075,12 @@ function saveNamedPortfolio(){
 function loadSavedPortfolio(name){const p=loadPFs().find(x=>x.name===name);if(!p)return;
   portfolioRows=p.rows.map(r=>({...r}));savePort();renderWeightRows();updateWeightBar();
   if(p.bench)document.getElementById('p-bench').value=p.bench;
-  try{showApp();switchTab('portfolio');}catch(e){}const s=document.getElementById('pf-select');if(s)s.value=name;toast(`Loaded "${name}". Click Run to analyze it.`);}
-function deleteSavedPortfolio(name){if(!confirm(`Delete "${name}"?`))return;savePFs(loadPFs().filter(p=>p.name!==name));if(document.querySelector('.notice-wrap.acct'))openAccount();}
+  try{showApp();switchTab('portfolio');}catch(e){}const s=document.getElementById('pf-select');if(s){s.value=name;document.getElementById('pf-del').style.display='';}toast(`Loaded "${name}". Click Run to analyze it.`);}
+function pfSelectChanged(v){document.getElementById('pf-del').style.display=v?'':'none';if(v)loadSavedPortfolio(v);}
+function deleteSavedPortfolio(name){if(!name)return;if(!confirm(`Delete the saved portfolio "${name}"?`))return;
+  savePFs(loadPFs().filter(p=>p.name!==name));
+  const sel=document.getElementById('pf-select');if(sel){sel.value='';document.getElementById('pf-del').style.display='none';}
+  toast(`Deleted "${name}"`);if(document.querySelector('.notice-wrap.acct'))openAccount();}
 
 // sync: local copies always; the account copy when signed in
 const _saveWL=saveWL;saveWL=function(l){const ok=_saveWL(l);schedulePush();return ok;};
