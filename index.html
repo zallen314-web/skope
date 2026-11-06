@@ -292,8 +292,9 @@ canvas{width:100%!important;display:block;}
 
   <section class="intro-sec"><div class="intro-inner">
     <h3 class="h-bold">Where the data comes from</h3>
-    <p class="lead">Prices and fundamentals are pulled live. Factor returns come from the standard academic source.</p>
-    <div class="src-row"><b>Prices and fundamentals</b><span><a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Daily prices, valuation multiples and company details, requested from your browser with your own free API key (800 requests a day, no credit card).</span></div>
+    <p class="lead">Prices are pulled live, financial statements come from official SEC filings, and factor returns come from the standard academic source.</p>
+    <div class="src-row"><b>Prices</b><span><a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Daily prices and live quotes, requested from your browser with your own free API key (800 requests a day, no credit card).</span></div>
+    <div class="src-row"><b>Financial statements</b><span><a href="https://www.sec.gov/edgar" target="_blank">SEC EDGAR</a>. Revenue, earnings, cash flow and balance sheet figures from each company's 10-K and 10-Q filings, summed over the trailing twelve months. Valuation multiples combine these with the live price.</span></div>
     <div class="src-row"><b>Factor returns</b><span><a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html" target="_blank">Kenneth R. French Data Library</a>, Tuck School of Business at Dartmouth. Daily and monthly Fama-French and momentum factors, included in this tool and current <span id="ff-asof-intro"></span>.</span></div>
     <div class="src-row"><b>Your inputs</b><span>Your API key and saved tickers stay in this browser. Price requests go to Twelve Data. If you sign up for reports, your email and holdings are stored to send them, and unsubscribing deletes both.</span></div>
   </div></section>
@@ -308,7 +309,7 @@ canvas{width:100%!important;display:block;}
     </ol>
     <button class="intro-cta dark" onclick="startApp()">Open Skope</button>
   </div></section>
-  <div class="intro-foot"><div class="intro-inner">Prices and fundamentals from <a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Fama-French factors from the <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html" target="_blank">Kenneth R. French Data Library</a>, released monthly with a lag; data here runs through <span id="ff-asof-foot"></span>.<br>Built by Zach Allen. Skope is for informational and educational purposes only and is not investment advice.</div></div>
+  <div class="intro-foot"><div class="intro-inner">Prices from <a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Financial statements from <a href="https://www.sec.gov/edgar" target="_blank">SEC EDGAR</a>. Fama-French factors from the <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html" target="_blank">Kenneth R. French Data Library</a>, released monthly with a lag; data here runs through <span id="ff-asof-foot"></span>.<br>Built by Zach Allen. Skope is for informational and educational purposes only and is not investment advice.</div></div>
 </div>
 
 <div id="app" style="display:none">
@@ -319,7 +320,7 @@ canvas{width:100%!important;display:block;}
 
 <div id="key-page"><div class="key-card">
   <h2 class="key-h">Connect your market data</h2>
-  <p class="key-p">Skope pulls live prices and fundamentals from Twelve Data using your own free API key. You only enter it once: it's saved in this browser and is never sent anywhere except Twelve Data.</p>
+  <p class="key-p">Skope pulls live prices from Twelve Data using your own free API key. You only enter it once: it's saved in this browser and is never sent anywhere except Twelve Data.</p>
   <div id="key-msg" class="key-msg" style="display:none"></div>
   <div id="key-status" class="key-status"></div>
   <div class="api-bar">
@@ -442,7 +443,7 @@ canvas{width:100%!important;display:block;}
   <div id="c-output"><div class="empty">Select tickers and run</div></div>
 </div>
 
-<div class="app-foot">Prices and fundamentals from <a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Fama-French factors from the <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html" target="_blank">Kenneth R. French Data Library</a>, released monthly with a lag; data here runs <span id="ff-asof"></span>. <label class="ff-upd">Update factors<input type="file" accept=".zip,.csv,.CSV" multiple style="display:none" onchange="updateFactorFiles(this.files)"></label><br>Skope is for informational and educational purposes only and is not investment advice.</div>
+<div class="app-foot">Prices from <a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Financial statements from <a href="https://www.sec.gov/edgar" target="_blank">SEC EDGAR</a>. Fama-French factors from the <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html" target="_blank">Kenneth R. French Data Library</a>, released monthly with a lag; data here runs <span id="ff-asof"></span>. <label class="ff-upd">Update factors<input type="file" accept=".zip,.csv,.CSV" multiple style="display:none" onchange="updateFactorFiles(this.files)"></label><br>Skope is for informational and educational purposes only and is not investment advice.</div>
 </div>
 <div class="toast" id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -14449,7 +14450,10 @@ function demoResponse(url){
     dividends_and_splits:{forward_annual_dividend_yield:0.021,payout_ratio:0.35}}};
 }
 const _realFetch=window.fetch.bind(window);
-window.fetch=async(url,opts)=>{const u=String(url);if(DEMO&&u.includes('api.twelvedata.com'))return new Response(JSON.stringify(demoResponse(u)),{status:200,headers:{'Content-Type':'application/json'}});return _realFetch(url,opts);};
+function demoSEC(){const c=demoSeries().map(x=>+x.close),last=c[c.length-1],mcap=4.2e10,rev=mcap/2.1,ni=mcap/18.2;
+  return{ok:true,data:{source:'SEC EDGAR',name:'Demo Industries (simulated)',periodEnd:'2026-09-30',revenueTTM:rev,netIncomeTTM:ni,operatingIncomeTTM:rev*0.19,grossProfitTTM:rev*0.42,operatingCashFlowTTM:mcap*0.07,capexTTM:mcap*0.02,freeCashFlowTTM:mcap*0.05,
+    ebitdaTTM:(mcap+5e9)/11.2,dividendsTTM:mcap*0.021,revenueGrowth:0.06,earningsGrowth:0.13,equity:mcap/3.3,assets:ni/0.09,currentAssets:9e9,currentLiabilities:6e9,cash:3e9,debt:8e9,shares:mcap/last,isBank:false}};}
+window.fetch=async(url,opts)=>{const u=String(url);if(DEMO&&u.includes('/functions/v1/fundamentals'))return new Response(JSON.stringify(demoSEC()),{status:200,headers:{'Content-Type':'application/json'}});if(DEMO&&u.includes('api.twelvedata.com'))return new Response(JSON.stringify(demoResponse(u)),{status:200,headers:{'Content-Type':'application/json'}});return _realFetch(url,opts);};
 function runDemo(){
   DEMO=true;closeKeyPage();showApp();try{switchTab('single');}catch(e){}
   document.getElementById('demo-banner').style.display='flex';
@@ -14594,65 +14598,60 @@ async function fetchTwelvedata(ticker, outputsize=504) {
   for(let i=1;i<clean.length;i++){const p=parseFloat(clean[i].close),pp=parseFloat(clean[i-1].close);daily.push({date:clean[i].datetime.replace(/-/g,''),ym:clean[i].datetime.slice(0,7).replace('-',''),ret:(p-pp)/pp});}
   const mm={};for(const{ym,ret}of daily){if(!mm[ym])mm[ym]=1;mm[ym]*=(1+ret);}
   const monthly=Object.entries(mm).sort(([a],[b])=>a.localeCompare(b)).map(([ym,c])=>({date:ym,ret:c-1}));
-  const out={daily,monthly,name:d.meta?.symbol||ticker,exchange:d.meta?.exchange||'',type:d.meta?.type||''};
+  const out={daily,monthly,closes:clean.map(v=>parseFloat(v.close)),name:d.meta?.symbol||ticker,exchange:d.meta?.exchange||'',type:d.meta?.type||''};
   CACHE[ck]=out; return out;
 }
 
-// ── Twelvedata: fundamentals (statistics + quote) ─────────────────────────────
+// ── Fundamentals: SEC filings (via Skope's backend) + live quote from Twelve Data ──
+// Financial statements come from SEC EDGAR (trailing twelve months); ratios use the live price.
 async function fetchFundamentals(ticker) {
   const apiKey=getApiKey(); if(!apiKey)return null;
   const ck=`fund_${ticker}_${Math.floor(Date.now()/60000)}`; if(CACHE[ck])return CACHE[ck];
   try {
-    const [statsResp, quoteResp] = await Promise.all([
-      fetch(`https://api.twelvedata.com/statistics?symbol=${encodeURIComponent(ticker)}&apikey=${apiKey}`),
-      fetch(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(ticker)}&apikey=${apiKey}`)
+    const [quote, sec] = await Promise.all([
+      fetch(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(ticker)}&apikey=${apiKey}`).then(r=>r.json()).catch(()=>({})),
+      fetch(`${SKOPE_API}/fundamentals?ticker=${encodeURIComponent(ticker)}`).then(r=>r.json()).catch(()=>null)
     ]);
-    const [stats, quote] = await Promise.all([statsResp.json(), quoteResp.json()]);
-    const s = stats.statistics || {};
-    const vm = s.valuations_metrics || {};
-    const fin = s.financials || {};
-    const inc = fin.income_statement || {};
-    const bal = fin.balance_sheet || {};
-    const cf  = fin.cash_flow || {};
-    const sps = s.stock_price_summary || {};
-    const div = s.dividends_and_splits || {};
-    const q52 = quote.fifty_two_week || {};
-
+    const f = sec && sec.ok ? sec.data : null, q52 = quote.fifty_two_week || {};
+    const price = parseFloat(quote.close) || parseFloat(quote.previous_close) || null;
+    const pos = x => x!=null && x>0, div = (a,b) => a!=null && pos(b) ? a/b : null;
+    let mcap = f && price && pos(f.shares) ? price*f.shares : null;
+    // guard against share counts that don't match this share class (e.g. dual-class stocks)
+    if (mcap && f.revenueTTM && (mcap/f.revenueTTM < 0.05 || mcap/f.revenueTTM > 300)) mcap = null;
+    const pe = f && pos(f.netIncomeTTM) ? div(mcap, f.netIncomeTTM) : null;
+    const ev = mcap!=null ? mcap + (f.debt||0) - (f.cash||0) : null;
     const out = {
-      // Valuation
-      trailingPE:      vm.trailing_pe,
-      forwardPE:       vm.forward_pe,
-      pegRatio:        vm.peg_ratio,
-      priceToSales:    vm.price_to_sales_ttm,
-      priceToBook:     vm.price_to_book_mrq,
-      evToEbitda:      vm.enterprise_to_ebitda,
-      marketCap:       vm.market_capitalization,
+      source: f ? 'SEC' : null, demo: DEMO, periodEnd: f ? f.periodEnd : null, isBank: !!(f && f.isBank), noPrice: !!f && mcap==null,
+      // Valuation (live price × SEC trailing-twelve-month figures)
+      trailingPE:      pe,
+      pegRatio:        pe && f.earningsGrowth>0 ? pe/(f.earningsGrowth*100) : null,
+      priceToSales:    f ? div(mcap, f.revenueTTM) : null,
+      priceToBook:     f ? div(mcap, f.equity) : null,
+      evToEbitda:      f && ev!=null ? div(ev, f.ebitdaTTM) : null,
+      fcfYield:        f && mcap && f.freeCashFlowTTM!=null ? f.freeCashFlowTTM/mcap : null,
+      marketCap:       mcap,
       // Quality
-      profitMargin:    fin.profit_margin,
-      operatingMargin: fin.operating_margin,
-      roe:             fin.return_on_equity_ttm,
-      roa:             fin.return_on_assets_ttm,
-      // Growth
-      revenueGrowth:   inc.quarterly_revenue_growth,
-      earningsGrowth:  inc.quarterly_earnings_growth_yoy,
-      eps:             inc.diluted_eps_ttm,
+      profitMargin:    f ? div(f.netIncomeTTM, f.revenueTTM) : null,
+      operatingMargin: f ? div(f.operatingIncomeTTM, f.revenueTTM) : null,
+      roe:             f ? div(f.netIncomeTTM, f.equity) : null,
+      roa:             f ? div(f.netIncomeTTM, f.assets) : null,
+      // Growth (trailing twelve months vs the twelve months before)
+      revenueGrowth:   f ? f.revenueGrowth : null,
+      earningsGrowth:  f ? f.earningsGrowth : null,
+      eps:             f ? div(f.netIncomeTTM, f.shares) : null,
       // Balance sheet
-      debtToEquity:    bal.total_debt_to_equity_mrq,
-      currentRatio:    bal.current_ratio_mrq,
-      // Price
-      beta:            sps.beta,
-      ma50:            sps.day_50_ma,
-      ma200:           sps.day_200_ma,
-      wk52Low:         sps.fifty_two_week_low  || parseFloat(q52.low),
-      wk52High:        sps.fifty_two_week_high || parseFloat(q52.high),
+      debtToEquity:    f && f.debt!=null ? div(f.debt, f.equity) : null,
+      currentRatio:    f ? div(f.currentAssets, f.currentLiabilities) : null,
+      // Price (moving averages are filled in from the price history by the caller)
+      ma50: null, ma200: null,
+      wk52Low:         parseFloat(q52.low) || null,
+      wk52High:        parseFloat(q52.high) || null,
       // Dividend
-      divYield:        div.forward_annual_dividend_yield,
-      payoutRatio:     div.payout_ratio,
-      // Current price from quote
-      currentPrice:    parseFloat(quote.close) || parseFloat(quote.previous_close),
-      isETF:           (d => d?.meta?.type === 'ETF' || d?.type === 'ETF')(stats),
+      divYield:        f && mcap && f.dividendsTTM ? f.dividendsTTM/mcap : null,
+      payoutRatio:     f && pos(f.netIncomeTTM) && f.dividendsTTM ? f.dividendsTTM/f.netIncomeTTM : null,
+      currentPrice:    price,
       // Live quote for the ID bar
-      name:            quote.name || '',
+      name:            quote.name || (f && f.name) || '',
       currency:        quote.currency || 'USD',
       change:          parseFloat(quote.change),
       pctChange:       parseFloat(quote.percent_change),
@@ -14679,8 +14678,9 @@ function renderFundamentals(ticker, fund) {
   function pbSignal(v) { if(!v) return 'neutral'; if(v<1.5)return 'cheap'; if(v<4)return 'fair'; return 'rich'; }
   function evEbSignal(v) { if(!v) return 'neutral'; if(v<10)return 'cheap'; if(v<18)return 'fair'; return 'rich'; }
 
-  const hasValuation = fund.trailingPE || fund.forwardPE || fund.pegRatio || fund.priceToSales || fund.priceToBook || fund.evToEbitda;
-  const isETF = !hasValuation && (fund.trailingPE === null || fund.trailingPE === undefined);
+  const hasValuation = fund.trailingPE || fund.fcfYield!=null || fund.pegRatio || fund.priceToSales || fund.priceToBook || fund.evToEbitda;
+  const isETF = !fund.source; // no SEC financial statements: ETF, fund or foreign filer
+  const pd = fund.periodEnd ? new Date(fund.periodEnd+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
 
   // 52-week position
   const wkPos = (fund.currentPrice && fund.wk52Low && fund.wk52High)
@@ -14715,19 +14715,19 @@ function renderFundamentals(ticker, fund) {
       <span class="fund-badge ${peSig}">${badgeLabel(peSig)}</span>
     </div>`);
 
-    const fpe=fund.forwardPE, fpeSig=forwardPESignal(fpe);
-    cards.push(`<div class="fund-card ${fpeSig}">
-      <div class="fund-label">Forward P/E</div>
-      <div class="fund-value ${fpeSig}">${fmt(fpe,1)}<span style="font-size:14px;font-weight:400;color:var(--text3)">x</span></div>
-      <div class="fund-sub">Next 12-mo earnings · growth priced in</div>
-      <span class="fund-badge ${fpeSig}">${badgeLabel(fpeSig)}</span>
+    const fy=fund.fcfYield, fySig=fy==null?'neutral':fy>0.06?'cheap':fy>0.03?'fair':'rich';
+    cards.push(`<div class="fund-card ${fySig}">
+      <div class="fund-label">Free Cash Flow Yield</div>
+      <div class="fund-value ${fySig}">${fy!=null?(fy*100).toFixed(1):'—'}<span style="font-size:14px;font-weight:400;color:var(--text3)">%</span></div>
+      <div class="fund-sub">FCF ÷ market cap · &gt;6% cheap, &lt;3% expensive</div>
+      <span class="fund-badge ${fySig}">${badgeLabel(fySig)}</span>
     </div>`);
 
     const peg=fund.pegRatio, pegSig=pegSignal(peg);
     cards.push(`<div class="fund-card ${pegSig}">
-      <div class="fund-label">PEG Ratio</div>
+      <div class="fund-label">PEG Ratio (trailing)</div>
       <div class="fund-value ${pegSig}">${fmt(peg,2)}</div>
-      <div class="fund-sub">P/E ÷ growth · &lt;1 cheap, &gt;2 expensive</div>
+      <div class="fund-sub">P/E ÷ last year's earnings growth · &lt;1 cheap</div>
       <span class="fund-badge ${pegSig}">${badgeLabel(pegSig)}</span>
     </div>`);
 
@@ -14782,7 +14782,7 @@ function renderFundamentals(ticker, fund) {
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">Quality & Growth Metrics</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0">
-        ${[[`Profit Margin`,fmtPct(fund.profitMargin),'Earnings per dollar of revenue'],[`Operating Margin`,fmtPct(fund.operatingMargin),'Operating efficiency'],[`ROE (TTM)`,fmtPct(fund.roe),'Return on equity — higher = better'],[`Revenue Growth (QoQ)`,fmtPct(fund.revenueGrowth),'Latest quarter YoY']].map(([l,v,sub])=>`
+        ${[[`Profit Margin`,fmtPct(fund.profitMargin),'Earnings per dollar of revenue'],[`Operating Margin`,fmtPct(fund.operatingMargin),'Operating efficiency'],[`ROE (TTM)`,fmtPct(fund.roe),'Return on equity — higher = better'],[`Revenue Growth`,fmtPct(fund.revenueGrowth),'Trailing 12 months vs prior 12']].map(([l,v,sub])=>`
           <div style="padding:12px 16px;border-right:1px solid var(--border2)">
             <div style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px">${l}</div>
             <div style="font-family:'Source Serif 4',Georgia,serif;font-size:24px;font-weight:400;margin-bottom:2px;font-variant-numeric:lining-nums tabular-nums">${v}</div>
@@ -14795,7 +14795,7 @@ function renderFundamentals(ticker, fund) {
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">
         Valuation Snapshot
-        <span style="font-weight:400;font-size:9px;color:var(--text3)">${isETF?'ETF — traditional valuation metrics not applicable · showing price metrics':ticker+' · color = cheap / fair / expensive vs historical norms'}</span>
+        <span style="font-weight:400;font-size:9px;color:var(--text3)">${isETF?'No SEC financial statements (ETFs, funds and most foreign companies) · showing price metrics':`${ticker} · ${fund.demo?'simulated financials':'financials from SEC filings through '+pd}${fund.noPrice?' · price multiples unavailable for this share class':''}${fund.isBank?' · bank: EV/EBITDA and FCF not meaningful':''}`}</span>
       </div>
       <div class="fund-grid" style="grid-template-columns:repeat(${isETF?2:3},1fr)">
         ${isETF ? '' : cards.join('')}
@@ -14804,6 +14804,7 @@ function renderFundamentals(ticker, fund) {
       </div>
     </div>
     ${qualityHtml}`;
+  el.innerHTML = el.innerHTML.replace(/—<span style="font-size:14px;font-weight:400;color:var\(--text3\)">(x|%)<\/span>/g,'—');
 }
 
 // ── French factors ────────────────────────────────────────────────────────────
@@ -15003,16 +15004,16 @@ function downloadReport(){
 
   // ── valuation
   section('Valuation');
-  if(f){kv([['P/E (TTM)',fx(f.trailingPE)],['Forward P/E',fx(f.forwardPE)],['PEG ratio',(num(f.pegRatio)==null?dash:num(f.pegRatio).toFixed(2))],['Price / sales',fx(f.priceToSales)],['Price / book',fx(f.priceToBook)],['EV / EBITDA',fx(f.evToEbitda)],
+  if(f){kv([['P/E (TTM)',fx(f.trailingPE)],['FCF yield',fp(f.fcfYield)],['PEG (trailing)',(num(f.pegRatio)==null?dash:num(f.pegRatio).toFixed(2))],['Price / sales',fx(f.priceToSales)],['Price / book',fx(f.priceToBook)],['EV / EBITDA',fx(f.evToEbitda)],
       ['Market cap',fcap(f.marketCap)],['Dividend yield',fp(f.divYield)],['Profit margin',fp(f.profitMargin)],['Operating margin',fp(f.operatingMargin)],['ROE (TTM)',fp(f.roe)],['ROA (TTM)',fp(f.roa)],
-      ['Revenue growth (QoQ)',fp(f.revenueGrowth)],['Earnings growth (YoY)',fp(f.earningsGrowth)],['Debt / equity',(num(f.debtToEquity)==null?dash:num(f.debtToEquity).toFixed(1))],['Current ratio',(num(f.currentRatio)==null?dash:num(f.currentRatio).toFixed(2))],
+      ['Revenue growth (TTM)',fp(f.revenueGrowth)],['Earnings growth (TTM)',fp(f.earningsGrowth)],['Debt / equity',(num(f.debtToEquity)==null?dash:num(f.debtToEquity).toFixed(1))],['Current ratio',(num(f.currentRatio)==null?dash:num(f.currentRatio).toFixed(2))],
       ['52-week range',(num(f.wk52Low)!=null&&num(f.wk52High)!=null)?`${fd(f.wk52Low)} - ${fd(f.wk52High)}`:dash],['50 / 200-day MA',(num(f.ma50)!=null&&num(f.ma200)!=null)?`${fd(f.ma50)} / ${fd(f.ma200)}`:dash]]);}
   else para('Valuation data is not available for this ticker.',{size:9,color:MUT});
 
   // ── footers
   const n=doc.getNumberOfPages();
   for(let i=1;i<=n;i++){doc.setPage(i);doc.setDrawColor(...RULE);doc.setLineWidth(0.5);doc.line(M,H-46,W-M,H-46);doc.setFont('helvetica','normal');doc.setFontSize(6.8);doc.setTextColor(...MUT);
-    doc.text(doc.splitTextToSize(S(`Prices and fundamentals: Twelve Data. Fama-French factors: Kenneth R. French Data Library, released monthly with a lag; data through ${ffDate}. Generated by Skope on ${today}. For informational and educational purposes only; not investment advice.`),CW-60),M,H-34);
+    doc.text(doc.splitTextToSize(S(`Prices: Twelve Data. Financial statements: SEC EDGAR filings. Fama-French factors: Kenneth R. French Data Library, released monthly with a lag; data through ${ffDate}. Generated by Skope on ${today}. For informational and educational purposes only; not investment advice.`),CW-60),M,H-34);
     doc.text(`Page ${i} of ${n}`,W-M,H-34,{align:'right'});}
   const ld=new Date(),loc=`${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
   doc.save(`Skope_${info.ticker}_${loc}.pdf`);
@@ -15205,13 +15206,14 @@ async function runSingle(){
 
   try{
     setS('s',`Fetching ${ticker}...`,'active');
-    upP('price','loading',`Fetching ${ticker} price + fundamentals from Twelvedata...`);
+    upP('price','loading',`Fetching ${ticker} prices and SEC financials...`);
 
     // Fetch price + fundamentals in parallel
     const[stockData,fund]=await Promise.all([
       fetchTwelvedata(ticker,outputsize),
       fetchFundamentals(ticker)
     ]);
+    if(fund&&stockData.closes){const c=stockData.closes,ma=n=>c.length>=n?c.slice(-n).reduce((a,b)=>a+b,0)/n:null;fund.ma50=ma(50);fund.ma200=ma(200);}
     const info={ticker,name:(fund&&fund.name)||stockData.name,exch:stockData.exchange,type:stockData.type,sector:''};
     curInfo=info;
     upP('price','ok',`${stockData.daily.length} obs · ${info.name||ticker}${info.exch?' · '+info.exch:''}`);

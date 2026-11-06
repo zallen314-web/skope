@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.unsubscribe]
 verify_jwt = false
+
+[functions.fundamentals]
+verify_jwt = false
