@@ -51,6 +51,6 @@ console.log('Attribution A:', m1.attribution.map(a => `${a.factor} ${(a.contrib 
 const sumAttr = m1.attribution.reduce((s, a) => s + a.contrib, 0);
 console.log('Attribution sums to', (sumAttr * 100).toFixed(2) + '%/yr');
 mkdirSync('out', { recursive: true });
-const opts = { siteUrl: 'https://zallen314-web.github.io/skope/', unsubscribeUrl: 'https://example/unsubscribe', ffThrough: 'September 30, 2026' };
+const opts = { siteUrl: 'https://skoperesearch.com/', unsubscribeUrl: 'https://example/unsubscribe', ffThrough: 'September 30, 2026' };
 writeFileSync('out/test_first.html', buildEmail(m1, opts)); writeFileSync('out/test_second.html', buildEmail(m2, opts));
 console.log('Subject:', buildSubject(m2));

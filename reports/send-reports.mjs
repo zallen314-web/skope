@@ -13,7 +13,7 @@ const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = 
 const DRY = !!args['dry-run'], ONLY = typeof args.only === 'string' ? args.only.toLowerCase() : null, FORCE = !!args.force || !!ONLY;
 const env = k => { const v = process.env[k]; if (!v && !(DRY && ['RESEND_API_KEY', 'EMAIL_FROM'].includes(k))) throw new Error(`Missing env ${k}`); return v; };
 const SB = env('SUPABASE_URL').replace(/\/$/, ''), SRK = env('SUPABASE_SERVICE_ROLE_KEY');
-const SITE = (process.env.SITE_URL || 'https://zallen314-web.github.io/skope/').replace(/\/?$/, '/');
+const SITE = (process.env.SITE_URL || 'https://skoperesearch.com/').replace(/\/?$/, '/');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 

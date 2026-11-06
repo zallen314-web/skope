@@ -38,7 +38,7 @@ jobs:
           TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-          SITE_URL: https://zallen314-web.github.io/skope/
+          SITE_URL: https://skoperesearch.com/
           ONLY: ${{ github.event.inputs.only_email }}
           FORCE: ${{ github.event.inputs.force }}
           DRY: ${{ github.event.inputs.dry_run }}

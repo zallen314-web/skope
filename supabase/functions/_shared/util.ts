@@ -4,7 +4,7 @@
 
 export const SB = Deno.env.get('SUPABASE_URL')!;
 const SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-export const SITE = (Deno.env.get('SITE_URL') || 'https://zallen314-web.github.io/skope/').replace(/\/?$/, '/');
+export const SITE = (Deno.env.get('SITE_URL') || 'https://skoperesearch.com/').replace(/\/?$/, '/');
 export const FN = `${SB}/functions/v1`;
 
 export const cors = {
