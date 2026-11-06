@@ -15074,7 +15074,7 @@ async function renderPortRisk(weights,outputsize,freq,label){
   const monthly=ms.map(d=>({date:d,ret:weights.reduce((s,w,i)=>s+w.w*mm[i][d],0)}));
   const macro=await loadMacro(),rows=rkRows(monthly);
   const r=riskPanelHTML('pr',rows,{label:'this portfolio',contrib:weights.length>1?rkContribution(weights,ser):null,annF,macro});
-  el.innerHTML=`<div class="rk-head">Risk analysis</div>`+(typeof r==='string'?r:r.html);if(typeof r!=='string')drawRolling('pr',r.roll);
+  el.innerHTML=(typeof r==='string'?r:r.html);if(typeof r!=='string')drawRolling('pr',r.roll);
 }
 
 function portInsightsHTML(P){
@@ -15776,11 +15776,17 @@ async function runPortfolio(){
     setS('p',`Portfolio · R²=${(result.r2*100).toFixed(1)}% · α=${pct(result.alpha*annF)}${stars(result.alphaPVal)}`,'done');
     window.LAST_PORT={weights,model,result,annF,factors:Xm2[model],bench,freq,bBeta};
     renderPortResults(weights,model,result,pA,mktRaw,st,benchSt,benchRets,annF,!ffData,freq,bench);
-    document.getElementById('p-output').insertAdjacentHTML('beforeend','<div id="p-risk"></div>');renderPortRisk(weights,outputsize,freq).catch(e=>console.warn('risk',e));
+    renderPortRisk(weights,outputsize,freq).catch(e=>console.warn('risk',e));
   }catch(e){setS('p','Error: '+e.message,'error');document.getElementById('p-output').innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Error</div><p style="font-family:inherit;font-size:12px;color:var(--red)">${e.message}</p></div>`;}
   document.getElementById('p-runBtn').disabled=false;
 }
 
+// Portfolio results are split into tabs, like the Individual page
+let PTAB='summary';
+function setPortTab(name){PTAB=name;
+  ['summary','perf','factors','dist','risk'].forEach(k=>{const b=document.getElementById('pt-'+k),d=document.getElementById('pp-'+k);if(b)b.classList.toggle('on',k===name);if(d)d.style.display=k===name?'block':'none';});
+  requestAnimationFrame(()=>{try{Object.values(Chart.instances).forEach(c=>{if(c.canvas&&c.canvas.offsetParent&&c.canvas.id!=='p-donut'){c.resize();c.update('none');}});}catch(e){}});
+}
 function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchRets,annF,proxy,freq,bench){
   const aa=result.alpha*annF,fn=FN[model],fs=FS[model];
   const mL=Math.min(rawRets.length,benchRets.length);
@@ -15789,6 +15795,8 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
   const ir=te>0?(am*annF)/te:0;
   document.getElementById('p-output').innerHTML=`
     ${proxy?`<div class="warn">⚠ French factors unavailable — SPY proxy used.</div>`:''}
+    <div id="p-subtabs" class="subtabs">${[['summary','Summary'],['perf','Performance'],['factors','Factor exposures'],['dist','Return distribution'],['risk','Risk']].map(([k,l])=>`<button id="pt-${k}" class="stab" onclick="setPortTab('${k}')">${l}</button>`).join('')}</div>
+    <div id="pp-summary">
     ${window.LAST_PORT&&!proxy?portInsightsHTML(window.LAST_PORT):''}
     <div class="card"><div class="card-title">Allocation</div>
       <div class="donut-wrap">
@@ -15796,6 +15804,8 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
         <div class="donut-legend">${weights.map((w,i)=>`<div class="dl-item"><div class="dl-dot" style="background:${PAL[i%PAL.length]}"></div><span style="font-family:inherit;font-weight:600;color:var(--accent)">${w.ticker}</span><span style="font-size:10px;color:var(--text3);flex:1;padding-left:4px">${w.name.split(' ').slice(0,3).join(' ')}</span><span style="font-family:inherit;color:var(--text2)">${(w.w*100).toFixed(1)}%</span></div>`).join('')}</div>
       </div>
     </div>
+    </div>
+    <div id="pp-perf">
     <div class="two-col">
       <div class="card" style="margin-bottom:0"><div class="card-title">Portfolio Stats · ${freq}</div>
         <div class="sr"><span class="sl">Ann. Return</span><span class="sv ${cc(st.annMean)}">${pct(st.annMean)}</span></div>
@@ -15818,6 +15828,13 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
         <div class="sr"><span class="sl">Observations</span><span class="sv blue">${result.n}</span></div>
       </div>
     </div>
+    <div class="cgrid">
+      <div class="cbox"><div class="card-title" style="margin-bottom:10px">Cumulative Wealth vs ${bench}</div><canvas id="p-cum" height="200"></canvas></div>
+      <div class="cbox"><div class="card-title" style="margin-bottom:10px">Drawdown Profile</div><canvas id="p-dd" height="200"></canvas></div>
+      <div class="cbox" style="grid-column:1/-1"><div class="card-title" style="margin-bottom:10px">Rolling Volatility</div><canvas id="p-vol" height="120"></canvas></div>
+    </div>
+    </div>
+    <div id="pp-factors">
     <div class="card"><div class="card-title">Factor Regression · ${ML[model]}<span style="font-weight:400;color:var(--text3)">Bold β = significant at the 5% level</span></div>
       <div class="two-col" style="margin-bottom:12px">
         <div><div class="sr"><span class="sl">R²</span><span class="sv blue">${(result.r2*100).toFixed(3)}%</span></div><div class="sr"><span class="sl">Adj. R²</span><span class="sv">${(result.adjR2*100).toFixed(3)}%</span></div><div class="sr"><span class="sl">F-Stat</span><span class="sv">${result.fStat.toFixed(2)}</span></div></div>
@@ -15826,13 +15843,10 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
       <table class="ftbl"><thead><tr><th>Factor</th><th>Source</th><th>β</th><th>Std Err</th><th>t-stat</th><th>p-value</th><th>Sig</th><th>95% CI</th></tr></thead>
       <tbody>${fn.map((n,i)=>{const lo=result.betas[i]-1.96*result.se[i],hi=result.betas[i]+1.96*result.se[i],st2=fs[i]==='aqr'?`<span class="stag saqr">AQR</span>`:`<span class="stag sff">French</span>`;return`<tr><td>${n}</td><td>${st2}</td><td class="${cc(result.betas[i])}" style="font-weight:${result.pValues[i]<0.05?700:400}">${result.betas[i].toFixed(4)}</td><td>${result.se[i].toFixed(4)}</td><td>${result.tStats[i].toFixed(3)}</td><td>${result.pValues[i]<0.0001?'<0.0001':result.pValues[i].toFixed(4)}</td><td class="sig">${stars(result.pValues[i])}</td><td>[${lo.toFixed(3)}, ${hi.toFixed(3)}]</td></tr>`;}).join('')}</tbody></table>
     </div>
-    <div class="cgrid">
-      <div class="cbox"><div class="card-title" style="margin-bottom:10px">Cumulative Wealth vs ${bench}</div><canvas id="p-cum" height="200"></canvas></div>
-      <div class="cbox"><div class="card-title" style="margin-bottom:10px">Security Characteristic Line</div><canvas id="p-scat" height="200"></canvas></div>
-      <div class="cbox"><div class="card-title" style="margin-bottom:10px">Rolling Volatility</div><canvas id="p-vol" height="180"></canvas></div>
-      <div class="cbox"><div class="card-title" style="margin-bottom:10px">Drawdown Profile</div><canvas id="p-dd" height="180"></canvas></div>
+    <div class="cbox" style="max-width:640px"><div class="card-title" style="margin-bottom:10px">Security Characteristic Line</div><canvas id="p-scat" height="220"></canvas></div>
     </div>
-    ${distHTML('p')}
+    <div id="pp-dist">${distHTML('p')}</div>
+    <div id="pp-risk"><div id="p-risk"></div></div>
     <div class="footer-note">Portfolio: ${weights.map(w=>`${w.ticker} ${(w.w*100).toFixed(1)}%`).join(' · ')} &nbsp;|&nbsp; ${ML[model]} OLS on blended returns &nbsp;|&nbsp; Prices: Twelvedata &nbsp;|&nbsp; <span class="stag sff">French</span> bundled &nbsp;|&nbsp; * p&lt;0.10 ** p&lt;0.05 *** p&lt;0.01</div>`;
   new Chart(document.getElementById('p-donut').getContext('2d'),{type:'doughnut',data:{labels:weights.map(w=>w.ticker),datasets:[{data:weights.map(w=>w.w*100),backgroundColor:weights.map((_,i)=>PAL[i%PAL.length]),borderWidth:2,borderColor:'#fff'}]},options:{responsive:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed.toFixed(1)}%`}}}}});
   const cP=[1],cB=[1];rawRets.slice(0,mL).forEach((r,i)=>{cP.push(cP[cP.length-1]*(1+r));cB.push(cB[cB.length-1]*(1+benchRets[i]));});
@@ -15844,6 +15858,7 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
   let pk=1,nv=1;const dd=[];rawRets.forEach(r=>{nv*=(1+r);if(nv>pk)pk=nv;dd.push(+((nv-pk)/pk*100).toFixed(3));});
   new Chart(document.getElementById('p-dd').getContext('2d'),{type:'line',data:{labels:dd.map((_,i)=>i),datasets:[{label:'Drawdown',data:dd,borderColor:'#a12a2a',borderWidth:1.5,pointRadius:0,tension:0.2,fill:true,backgroundColor:'rgba(161,42,42,0.1)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Source Sans 3',sans-serif",size:10},boxWidth:12}}},scales:{x:{display:false},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Source Sans 3',sans-serif",size:9},callback:v=>v.toFixed(1)+'%'}}}}});
   initDist('p',rawRets,result.resid,freq);
+  setPortTab(PTAB);
 }
 
 // ── Comparison ────────────────────────────────────────────────────────────────
