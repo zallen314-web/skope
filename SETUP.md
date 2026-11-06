@@ -37,9 +37,9 @@ GitHub repo → **Settings → Secrets and variables → Actions** → add:
 
 | Name | Value |
 |---|---|
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → **API Keys** → the **secret** key (or legacy `service_role` key) |
-| `TWELVEDATA_API_KEY` | your Twelve Data key |
-| `RESEND_API_KEY` | same Resend key as above |
+| `SB_SERVICE_ROLE_KEY` | Supabase → Project Settings → **API Keys** → the **secret** key (or legacy `service_role` key) |
+| `TWELVEDATA_KEY` | your Twelve Data key |
+| `RESEND_API` | same Resend key as above |
 | `EMAIL_FROM` | same as above |
 
 ## 5. Deploy and test
