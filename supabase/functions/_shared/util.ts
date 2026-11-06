@@ -57,7 +57,7 @@ export function page(title: string, body: string) {
 export function emailShell(inner: string) {
   return `<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet"></head><body style="margin:0;background:#f4f5f3"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0"><tr><td align="center">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:#fff">
-<tr><td style="background:${G};padding:20px 28px;font:600 24px ${SERIF};color:#fff">Skope</td></tr>
+<tr><td style="background:${G};padding:20px 28px;font:600 24px ${SERIF};color:#fff">Skope<img src="https://skoperesearch.com/logo.png" width="28" height="26" alt="" style="display:inline-block;vertical-align:-3px;margin-left:10px;border:0;height:26px;width:28px"></td></tr>
 <tr><td style="padding:26px 28px;font:400 15px/1.6 ${SANS};color:#111">${inner}</td></tr>
 <tr><td style="padding:14px 28px 20px;border-top:1px solid #dfe3df;font:400 11px/1.6 ${SANS};color:#6a6f6b">Skope is for informational and educational purposes only and is not investment advice.</td></tr>
 </table></td></tr></table></body></html>`;

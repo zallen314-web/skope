@@ -53,7 +53,7 @@ export function buildEmail(m, { siteUrl, unsubscribeUrl, ffThrough }) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f3;padding:24px 0"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff">
   <tr><td style="background:${G};padding:22px 32px">
-    <span style="font:600 26px ${SERIF};color:#fff">Skope</span>
+    <span style="font:600 26px ${SERIF};color:#fff">Skope</span><img src="https://skoperesearch.com/logo.png" width="28" height="26" alt="" style="display:inline-block;vertical-align:-3px;margin-left:10px;border:0;height:26px;width:28px">
     <span style="float:right;font:400 12px/34px ${SANS};color:rgba(255,255,255,.75)">${m.frequency === 'monthly' ? 'Monthly' : 'Weekly'} portfolio report · ${dateTxt}</span>
   </td></tr>
   <tr><td style="padding:26px 32px 18px">
