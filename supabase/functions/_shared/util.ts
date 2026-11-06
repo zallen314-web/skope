@@ -25,13 +25,20 @@ export async function db(path: string, opts: RequestInit = {}) {
   return t ? JSON.parse(t) : null;
 }
 
+export class EmailError extends Error {}
 export async function sendEmail(to: string, subject: string, html: string) {
+  const key = Deno.env.get('RESEND_API_KEY') || Deno.env.get('RESEND_API');
+  if (!key) throw new EmailError('the RESEND_API_KEY secret is not set in Supabase (Edge Functions → Secrets).');
+  const from = Deno.env.get('EMAIL_FROM') || 'Skope <onboarding@resend.dev>';
   const r = await fetch(Deno.env.get('RESEND_URL') || 'https://api.resend.com/emails', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: Deno.env.get('EMAIL_FROM'), to: [to], subject, html }),
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to: [to], subject, html }),
   });
-  if (!r.ok) throw new Error(`resend ${r.status}: ${await r.text()}`);
+  if (!r.ok) {
+    let msg = ''; try { msg = (await r.json()).message || ''; } catch { /* ignore */ }
+    throw new EmailError(`the email service said: ${msg || 'HTTP ' + r.status}`);
+  }
 }
 
 const G = '#1d4433', SERIF = "'Source Serif 4',Georgia,'Times New Roman',serif", SANS = "-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";

@@ -1,7 +1,7 @@
 // POST {email, frequency, benchmark, holdings:[{ticker, weight}]}
 // Saves the request as UNCONFIRMED and emails a confirmation link (double opt-in),
 // so nobody can sign someone else up. Changing an existing subscription also needs re-confirming.
-import { button, cors, db, emailShell, esc, FN, json, sendEmail } from '../_shared/util.ts';
+import { button, cors, db, EmailError, emailShell, esc, FN, json, sendEmail } from '../_shared/util.ts';
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i, TICKER = /^[A-Z][A-Z0-9.\-]{0,9}$/;
 
@@ -26,7 +26,6 @@ Deno.serve(async req => {
     const token = crypto.randomUUID();
     if (existing.length) {
       const prev = existing[0];
-      if (!prev.confirmed && Date.now() - Date.parse(prev.created_at) < 60_000) return json({ ok: true, message: 'Check your inbox for the confirmation link.' });
       await db(`subscribers?id=eq.${prev.id}`, { method: 'PATCH', body: JSON.stringify({ frequency, benchmark, holdings, confirmed: false, confirm_token: token, created_at: new Date().toISOString() }) });
     } else {
       await db('subscribers', { method: 'POST', body: JSON.stringify({ email, frequency, benchmark, holdings, confirm_token: token }) });
@@ -40,6 +39,7 @@ Deno.serve(async req => {
     return json({ ok: true, message: 'Almost done: check your inbox for a confirmation link.' });
   } catch (e) {
     console.error(e);
+    if (e instanceof EmailError) return json({ error: `Your request was saved, but the confirmation email couldn't be sent: ${e.message}` }, 502);
     return json({ error: 'Something went wrong saving your request. Please try again.' }, 500);
   }
 });
