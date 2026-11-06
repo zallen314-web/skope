@@ -95,6 +95,13 @@ body{background:var(--bg);color:var(--text);font-family:'Source Sans 3',-apple-s
 .fund-value.rich{color:var(--text);}
 .fund-value.neutral{color:var(--text2);}
 .fund-sub{font-size:10.5px;color:var(--text3);line-height:1.4;}
+.fl-title{font-family:'Source Serif 4',Georgia,serif;font-size:19px;line-height:1.3;margin:2px 0 12px;}
+.fl-h{font-family:'Source Serif 4',Georgia,serif;font-size:14px;font-weight:600;color:var(--text2);margin:14px 0 6px;}
+.fl-list{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:var(--text);}.fl-list li{margin-bottom:4px;}
+.fl-q{margin:6px 0 10px;padding:0 0 0 14px;border-left:2px solid var(--accent);font-family:'Source Serif 4',Georgia,serif;font-size:15px;line-height:1.5;color:var(--text);}
+.fl-q span{display:block;font-family:inherit;font-size:12px;color:var(--text3);margin-top:3px;}
+.fl-risks{margin:0;padding-left:20px;font-size:13.5px;line-height:1.55;}.fl-risks li{margin-bottom:7px;}.fl-risks .grp{display:block;font-size:11px;color:var(--text3);}
+.fl-src{font-size:11px;color:var(--text3);margin-top:10px;}.fl-src a,.card-title a.fl-link{color:var(--accent);}
 .fund-yoy{font-size:10.5px;color:var(--text2);margin-top:6px;font-variant-numeric:tabular-nums;}
 .fund-badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9.5px;font-family:inherit;font-weight:700;margin-top:4px;}
 .fund-badge.cheap{background:#e7f2ea;color:var(--green);}
@@ -15010,6 +15017,17 @@ function downloadReport(){
   document.querySelectorAll('#sp-summary .fs-list li').forEach(li=>{const t=li.innerText,k=t.indexOf(':');ensure(16);doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(...INK);const lab=S(t.slice(0,k+1));doc.text(lab,M,y+7.6);const lw=doc.getTextWidth(lab)+4;
     doc.setFont('helvetica','normal');const L=doc.splitTextToSize(S(t.slice(k+1).trim()),CW-lw);doc.text(L,M+lw,y+7.6);y+=L.length*13.5+3;});
   const nt=document.querySelector('#sp-summary .fs-note');if(nt){y+=2;para(nt.innerText,{size:8.5,color:MUT});}
+  const HL=window.LAST_HL;
+  if(HL&&HL.earnings){const e=HL.earnings;section('Latest earnings');
+    para(`Reported ${fDate(e.date)}${e.title?' · '+e.title:''}`,{font:'times',size:13,lh:1.3});y+=4;
+    const bl=(arr)=>arr.forEach(x=>{ensure(18);const L=doc.splitTextToSize(S(x),CW-12);doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...INK);doc.text('•',M,y+7.6);doc.text(L,M+12,y+7.6);y+=L.length*13.5+3;});
+    if(e.highlights.length){para('Reported numbers',{style:'bold',size:9.5});bl(e.highlights);y+=4;}
+    if(e.quotes.length){para('From management',{style:'bold',size:9.5});e.quotes.forEach(q=>{para('"'+q.text+'"',{font:'times',style:'italic',size:10.5,x:M+10,w:CW-10});para(q.by,{size:8.5,color:MUT,x:M+10,w:CW-10});y+=4;});}
+    para('Guidance',{style:'bold',size:9.5});if(e.outlook.length)bl(e.outlook);else para('No numerical guidance in this release.',{size:9,color:MUT});
+    para('Source: '+e.url,{size:7.5,color:MUT});}
+  if(HL&&HL.risks){const k=HL.risks;section('Key risks');para(`From the 10-K filed ${fDate(k.date)}, in the company's own words (first ${k.items.length} listed).`,{size:8.5,color:MUT});y+=2;
+    k.items.forEach((r,i)=>{ensure(18);const L=doc.splitTextToSize(S(r.heading),CW-16);doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...INK);doc.text(String(i+1)+'.',M,y+7.6);doc.text(L,M+16,y+7.6);y+=L.length*13.5+4;});
+    para('Source: '+k.url,{size:7.5,color:MUT});}
   section('Factor exposures');
   tbl(['R-squared','Adj. R-squared','F-stat','Alpha (ann.)','Alpha t','Alpha p','Obs.'],[[(r.r2*100).toFixed(1)+'%',(r.adjR2*100).toFixed(1)+'%',r.fStat.toFixed(1),S((r.alpha*R.annF*100).toFixed(2)+'%'),r.alphaTStat.toFixed(2),r.alphaPVal.toFixed(3),String(r.n)]]);
   const body=fn.map((n,i)=>[S(n),r.betas[i].toFixed(3),r.se[i].toFixed(3),r.tStats[i].toFixed(2),r.pValues[i]<0.0001?'<0.0001':r.pValues[i].toFixed(4),`[${(r.betas[i]-1.96*r.se[i]).toFixed(2)}, ${(r.betas[i]+1.96*r.se[i]).toFixed(2)}]`]);
@@ -15058,6 +15076,33 @@ function setSubTab(name){
     if(em)em.style.display=(name==='valuation'&&fu.style.display==='none')?'block':'none';}
   requestAnimationFrame(()=>{try{Object.values(Chart.instances).forEach(c=>{if(c.canvas&&c.canvas.offsetParent){c.resize();c.update('none');}});}catch(e){}});
 }
+// ── Filing highlights: latest earnings release + 10-K risk factors, quoted from SEC filings ──
+async function fetchHighlights(ticker){
+  if(typeof DEMO!=='undefined'&&DEMO)return null;
+  try{const r=await fetch(`${SKOPE_API}/highlights?ticker=${encodeURIComponent(ticker)}`);const j=await r.json();return j&&j.ok?j.data:null;}catch(e){return null;}
+}
+const escH=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fDate=d=>d?new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+function filingsHTML(h){
+  if(!h||(!h.earnings&&!h.risks))return '';
+  const e=h.earnings,k=h.risks;let out='';
+  if(e){
+    out+=`<div class="card"><div class="card-title">Latest earnings · reported ${fDate(e.date)} <a class="fl-link" href="${escH(e.url)}" target="_blank" rel="noopener">Read the release</a></div>
+      ${e.title?`<div class="fl-title">${escH(e.title)}</div>`:''}
+      ${e.highlights.length?`<div class="fl-h">Reported numbers</div><ul class="fl-list">${e.highlights.map(x=>`<li>${escH(x)}</li>`).join('')}</ul>`:''}
+      ${e.quotes.length?`<div class="fl-h">From management</div>${e.quotes.map(q=>`<blockquote class="fl-q">“${escH(q.text)}”<span>${escH(q.by)}</span></blockquote>`).join('')}`:''}
+      <div class="fl-h">Guidance</div>${e.outlook.length?`<ul class="fl-list">${e.outlook.map(x=>`<li>${escH(x)}</li>`).join('')}</ul>`:`<div style="font-size:13px;color:var(--text3)">No numerical guidance in this release.</div>`}
+    </div>`;
+  }
+  if(k){
+    out+=`<div class="card"><div class="card-title">Key risks · from the 10-K filed ${fDate(k.date)} <a class="fl-link" href="${escH(k.url)}" target="_blank" rel="noopener">Read Item 1A</a></div>
+      <ol class="fl-risks">${k.items.map(r=>`<li>${escH(r.heading)}${r.group&&!r.heading.startsWith(r.group)?`<span class="grp">${escH(r.group)}</span>`:''}</li>`).join('')}</ol>
+      <div class="fl-src">The first risk factors the company lists, in its own words. The full section covers many more.</div>
+    </div>`;
+  }
+  return out+`<div class="fl-src" style="margin:-4px 0 14px">Quoted directly from SEC filings.</div>`;
+}
+
 function factorSummaryHTML(ticker,model,r,annF,freq,proxy){
   const names=FN[model],aa=r.alpha*annF,sg=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(2);
   const S={};names.forEach((n,i)=>{S[n]={b:r.betas[i],t:r.tStats[i],sig:Math.abs(r.tStats[i])>=1.96};});
@@ -15233,7 +15278,8 @@ async function runSingle(){
     setS('s',`Fetching ${ticker}...`,'active');
     upP('price','loading',`Fetching ${ticker} prices and SEC financials...`);
 
-    // Fetch price + fundamentals in parallel
+    // Fetch price + fundamentals in parallel; filing highlights load in the background
+    window.LAST_HL=null;const hlP=fetchHighlights(ticker);
     const[stockData,fund]=await Promise.all([
       fetchTwelvedata(ticker,outputsize),
       fetchFundamentals(ticker)
@@ -15267,6 +15313,7 @@ async function runSingle(){
     renderFundamentals(ticker,fund);
     setS('s',`${info.name||ticker} · R²=${(result.r2*100).toFixed(1)}% · α=${pct(result.alpha*annF)}${stars(result.alphaPVal)}`,'done');
     renderSingle(ticker,model,result,rawRets,mktRaw,st,annF,!ffData,freq);
+    hlP.then(h=>{if(curInfo&&curInfo.ticker!==ticker)return;window.LAST_HL=h;const el=document.getElementById('sp-filings');if(el)el.innerHTML=filingsHTML(h);});
   }catch(e){
     setS('s','Error: '+e.message,'error');
     document.getElementById('s-output').innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Error</div><p style="font-family:inherit;font-size:12px;color:var(--red);margin-bottom:8px">${e.message}</p><p style="font-size:12px;color:var(--text2)">Check the ticker and your API key.</p></div>`;
@@ -15297,6 +15344,7 @@ function renderSingle(ticker,model,result,rawRets,mktRaw,st,annF,proxy,freq){
     ${proxy?`<div class="warn">⚠ French factors unavailable — SPY proxy used.</div>`:''}
     <div id="sp-summary">
       ${factorSummaryHTML(ticker,model,result,annF,freq,proxy)}
+      <div id="sp-filings"></div>
     </div>
     <div id="sp-factors">
       <div class="two-col">

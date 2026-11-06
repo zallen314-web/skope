@@ -206,7 +206,7 @@ export async function lookupCik(ticker: string, fetcher = fetch) {
 
 // Companies that re-registered under a new holding company: successor CIK -> predecessor CIK.
 // The successor's early filings lack full-year history, so the predecessor's facts fill it in.
-const PREDECESSOR: Record<number, number> = { 2115436: 34088 }; // ExxonMobil Holdings <- Exxon Mobil Corp
+export const PREDECESSOR: Record<number, number> = { 2115436: 34088 }; // ExxonMobil Holdings <- Exxon Mobil Corp
 
 async function facts(cik: number, fetcher: typeof fetch, tries = 2): Promise<any> {
   const r = await fetcher(`https://data.sec.gov/api/xbrl/companyfacts/CIK${String(cik).padStart(10, '0')}.json`, { headers: { 'User-Agent': SEC_UA } });
