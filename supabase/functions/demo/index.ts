@@ -49,5 +49,5 @@ Deno.serve(async req => {
   try {
     await db('demo_usage?on_conflict=day,visitor', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ day, visitor, n: mine + 1 }) });
   } catch (e) { saved = false; console.error('usage write', e); }
-  return json({ ...body, usage: { runs: mine + 1, of: PER_VISITOR, saved, v: visitor.slice(0, 6) } });
+  return json({ ...body, usage: { runs: mine + 1, of: PER_VISITOR } });
 });
