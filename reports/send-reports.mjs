@@ -8,7 +8,7 @@ import { strFromU8, unzipSync } from 'fflate';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { analyze, cleanDaily, parseFrenchMonthly } from './core.mjs';
 import { buildEmail, buildSubject } from './email.mjs';
-import { filingHighlights, addNews } from './news.mjs';
+import { addNews } from './news.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 const DRY = !!args['dry-run'], ONLY = typeof args.only === 'string' ? args.only.toLowerCase() : null, FORCE = !!args.force || !!ONLY;
@@ -85,9 +85,10 @@ async function main() {
       // highlights since the last report (at most 35 days back)
       const back = new Date(today.getTime() - (s.frequency === 'monthly' ? 35 : 8) * 864e5).toISOString().slice(0, 10);
       const since = s.last_sent_at && !FORCE ? [s.last_sent_at.slice(0, 10), back].sort().pop() : back;
-      const hl = await filingHighlights(holdings.map(h => h.ticker), since);
+      // recent headlines per holding (SEC filing figures stay on the stock pages)
+      const hl = holdings.map(h => ({ ticker: h.ticker, news: [] }));
       const hasNews = await addNews(hl, since, today.toISOString().slice(0, 10));
-      const html = buildEmail(m, { siteUrl: SITE, unsubscribeUrl: unsub, ffThrough, highlights: hl, hasNews }), subject = buildSubject(m);
+      const html = buildEmail(m, { siteUrl: SITE, unsubscribeUrl: unsub, ffThrough, headlines: hasNews ? hl : null }), subject = buildSubject(m);
       if (DRY) { mkdirSync('out', { recursive: true }); writeFileSync(`out/${s.email.replace(/[^a-z0-9]/gi, '_')}.html`, html); log(`[dry] ${s.email}: ${subject}`); }
       else {
         await sendEmail(s.email, subject, html, unsub);
