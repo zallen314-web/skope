@@ -14452,7 +14452,7 @@ function demoResponse(url){
 const _realFetch=window.fetch.bind(window);
 function demoSEC(){const c=demoSeries().map(x=>+x.close),last=c[c.length-1],mcap=4.2e10,rev=mcap/2.1,ni=mcap/18.2;
   return{ok:true,data:{source:'SEC EDGAR',name:'Demo Industries (simulated)',periodEnd:'2026-09-30',revenueTTM:rev,netIncomeTTM:ni,operatingIncomeTTM:rev*0.19,grossProfitTTM:rev*0.42,operatingCashFlowTTM:mcap*0.07,capexTTM:mcap*0.02,freeCashFlowTTM:mcap*0.05,
-    ebitdaTTM:(mcap+5e9)/11.2,dividendsTTM:mcap*0.021,revenueGrowth:0.06,earningsGrowth:0.13,equity:mcap/3.3,assets:ni/0.09,currentAssets:9e9,currentLiabilities:6e9,cash:3e9,debt:8e9,shares:mcap/last,isBank:false}};}
+    ebitdaTTM:(mcap+5e9)/11.2,dividendsTTM:mcap*0.021,revenueGrowth:0.06,earningsGrowth:0.13,revenueGrowthQ:0.07,epsTTM:+(last/18.2).toFixed(2),epsGrowth:0.14,equity:mcap/3.3,assets:ni/0.09,currentAssets:9e9,currentLiabilities:6e9,cash:3e9,debt:8e9,shares:mcap/last,isBank:false}};}
 window.fetch=async(url,opts)=>{const u=String(url);if(DEMO&&u.includes('/functions/v1/fundamentals'))return new Response(JSON.stringify(demoSEC()),{status:200,headers:{'Content-Type':'application/json'}});if(DEMO&&u.includes('api.twelvedata.com'))return new Response(JSON.stringify(demoResponse(u)),{status:200,headers:{'Content-Type':'application/json'}});return _realFetch(url,opts);};
 function runDemo(){
   DEMO=true;closeKeyPage();showApp();try{switchTab('single');}catch(e){}
@@ -14631,14 +14631,17 @@ async function fetchFundamentals(ticker) {
       fcfYield:        f && mcap && f.freeCashFlowTTM!=null ? f.freeCashFlowTTM/mcap : null,
       marketCap:       mcap,
       // Quality
+      grossMargin:     f && f.grossProfitTTM!=null ? div(f.grossProfitTTM, f.revenueTTM) : null,
       profitMargin:    f ? div(f.netIncomeTTM, f.revenueTTM) : null,
       operatingMargin: f ? div(f.operatingIncomeTTM, f.revenueTTM) : null,
       roe:             f ? div(f.netIncomeTTM, f.equity) : null,
       roa:             f ? div(f.netIncomeTTM, f.assets) : null,
       // Growth (trailing twelve months vs the twelve months before)
       revenueGrowth:   f ? f.revenueGrowth : null,
+      revenueGrowthQ:  f ? f.revenueGrowthQ : null,
+      epsGrowth:       f ? f.epsGrowth : null,
       earningsGrowth:  f ? f.earningsGrowth : null,
-      eps:             f ? div(f.netIncomeTTM, f.shares) : null,
+      eps:             f ? (f.epsTTM!=null ? f.epsTTM : div(f.netIncomeTTM, f.shares)) : null,
       // Balance sheet
       debtToEquity:    f && f.debt!=null ? div(f.debt, f.equity) : null,
       currentRatio:    f ? div(f.currentAssets, f.currentLiabilities) : null,
@@ -14778,12 +14781,23 @@ function renderFundamentals(ticker, fund) {
   </div>` : '';
 
   // Quality summary row (for stocks)
-  const qualityHtml = (!isETF && (fund.profitMargin||fund.roe)) ? `
+  const fmtEps = v => v!=null ? (v<0?'−$':'$')+Math.abs(v).toFixed(2) : '—';
+  const qItems = [
+    ['Gross Margin',fmtPct(fund.grossMargin),'Revenue left after cost of sales'],
+    ['Operating Margin',fmtPct(fund.operatingMargin),'Profit from operations'],
+    ['Net Margin',fmtPct(fund.profitMargin),'Earnings per dollar of revenue'],
+    ['ROE',fmtPct(fund.roe),'Net income ÷ shareholder equity'],
+    ['Revenue Growth (YoY)',fmtPct(fund.revenueGrowthQ),'Latest quarter vs same quarter last year'],
+    ['Revenue Growth (TTM)',fmtPct(fund.revenueGrowth),'Last 12 months vs prior 12'],
+    ['EPS (TTM)',fmtEps(fund.eps),'Diluted earnings per share'],
+    ['EPS Growth (TTM)',fmtPct(fund.epsGrowth),'Last 12 months vs prior 12'],
+  ];
+  const qualityHtml = (!isETF && (fund.profitMargin!=null||fund.revenueGrowth!=null)) ? `
     <div class="card" style="margin-bottom:14px">
-      <div class="card-title">Quality & Growth Metrics</div>
+      <div class="card-title">Margins, Growth &amp; Earnings</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0">
-        ${[[`Profit Margin`,fmtPct(fund.profitMargin),'Earnings per dollar of revenue'],[`Operating Margin`,fmtPct(fund.operatingMargin),'Operating efficiency'],[`ROE (TTM)`,fmtPct(fund.roe),'Return on equity — higher = better'],[`Revenue Growth`,fmtPct(fund.revenueGrowth),'Trailing 12 months vs prior 12']].map(([l,v,sub])=>`
-          <div style="padding:12px 16px;border-right:1px solid var(--border2)">
+        ${qItems.map(([l,v,sub],k)=>`
+          <div style="padding:12px 16px;${k%4!==3?'border-right:1px solid var(--border2);':''}${k>=4?'border-top:1px solid var(--border2);':''}">
             <div style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px">${l}</div>
             <div style="font-family:'Source Serif 4',Georgia,serif;font-size:24px;font-weight:400;margin-bottom:2px;font-variant-numeric:lining-nums tabular-nums">${v}</div>
             <div style="font-size:10px;color:var(--text3)">${sub}</div>
@@ -15005,8 +15019,8 @@ function downloadReport(){
   // ── valuation
   section('Valuation');
   if(f){kv([['P/E (TTM)',fx(f.trailingPE)],['FCF yield',fp(f.fcfYield)],['PEG (trailing)',(num(f.pegRatio)==null?dash:num(f.pegRatio).toFixed(2))],['Price / sales',fx(f.priceToSales)],['Price / book',fx(f.priceToBook)],['EV / EBITDA',fx(f.evToEbitda)],
-      ['Market cap',fcap(f.marketCap)],['Dividend yield',fp(f.divYield)],['Profit margin',fp(f.profitMargin)],['Operating margin',fp(f.operatingMargin)],['ROE (TTM)',fp(f.roe)],['ROA (TTM)',fp(f.roa)],
-      ['Revenue growth (TTM)',fp(f.revenueGrowth)],['Earnings growth (TTM)',fp(f.earningsGrowth)],['Debt / equity',(num(f.debtToEquity)==null?dash:num(f.debtToEquity).toFixed(1))],['Current ratio',(num(f.currentRatio)==null?dash:num(f.currentRatio).toFixed(2))],
+      ['Market cap',fcap(f.marketCap)],['Dividend yield',fp(f.divYield)],['Gross margin',fp(f.grossMargin)],['Operating margin',fp(f.operatingMargin)],['Net margin',fp(f.profitMargin)],['ROE (TTM)',fp(f.roe)],['ROA (TTM)',fp(f.roa)],
+      ['Revenue growth (YoY qtr)',fp(f.revenueGrowthQ)],['Revenue growth (TTM)',fp(f.revenueGrowth)],['EPS (TTM, diluted)',(num(f.eps)==null?dash:'$'+num(f.eps).toFixed(2))],['EPS growth (TTM)',fp(f.epsGrowth)],['Debt / equity',(num(f.debtToEquity)==null?dash:num(f.debtToEquity).toFixed(1))],['Current ratio',(num(f.currentRatio)==null?dash:num(f.currentRatio).toFixed(2))],
       ['52-week range',(num(f.wk52Low)!=null&&num(f.wk52High)!=null)?`${fd(f.wk52Low)} - ${fd(f.wk52High)}`:dash],['50 / 200-day MA',(num(f.ma50)!=null&&num(f.ma200)!=null)?`${fd(f.ma50)} / ${fd(f.ma200)}`:dash]]);}
   else para('Valuation data is not available for this ticker.',{size:9,color:MUT});
 

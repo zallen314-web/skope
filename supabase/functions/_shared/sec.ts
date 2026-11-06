@@ -49,6 +49,24 @@ function ttm(list: Fact[], asOf?: string): { val: number; end: string } | null {
   return { val: A.val + Y.val - P.val, end: Y.end };
 }
 
+// Value for the three months ending on `end` (±7 days). Fiscal Q4 is usually only reported as a full year,
+// so it is derived as full year minus the nine-month year-to-date figure.
+function quarter(list: Fact[], end: string): number | null {
+  const near = (a: string, b: string) => Math.abs(days(a, b)) <= 7;
+  const q = list.filter(f => f.start && near(f.end, end) && days(f.start, f.end) > 75 && days(f.start, f.end) < 120);
+  if (q.length) return q[q.length - 1].val;
+  const A = list.find(f => f.start && near(f.end, end) && days(f.start, f.end) > 350 && days(f.start, f.end) < 380);
+  if (!A) return null;
+  const N = list.find(f => f.start && Math.abs(days(A.start!, f.start)) <= 7 && days(f.start, f.end) > 240 && days(f.start, f.end) < 300);
+  return N ? A.val - N.val : null;
+}
+function quarterGrowth(list: Fact[], end: string): number | null {
+  const cur = quarter(list, end);
+  const prevEnd = new Date(Date.parse(end) - 364 * DAY).toISOString().slice(0, 10);
+  const prev = quarter(list, prevEnd) ?? quarter(list, new Date(Date.parse(end) - 365 * DAY).toISOString().slice(0, 10));
+  return cur != null && prev != null && prev > 0 ? cur / prev - 1 : null;
+}
+
 // Latest point-in-time value (balance sheet items).
 function instant(list: Fact[] | undefined, asOf?: string): { val: number; end: string } | null {
   const l = (list || []).filter(f => !f.start && (!asOf || f.end <= asOf));
@@ -56,12 +74,13 @@ function instant(list: Fact[] | undefined, asOf?: string): { val: number; end: s
 }
 
 const C = {
-  revenue: ['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'RevenueFromContractWithCustomerIncludingAssessedTax', 'SalesRevenueNet', 'SalesRevenueGoodsNet', 'TotalRevenuesAndOtherIncome'],
+  revenue: ['Revenues', 'RevenuesNetOfInterestExpense', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'RevenueFromContractWithCustomerIncludingAssessedTax', 'SalesRevenueNet', 'SalesRevenueGoodsNet', 'TotalRevenuesAndOtherIncome'],
   netIncome: ['NetIncomeLoss', 'NetIncomeLossAvailableToCommonStockholdersBasic', 'ProfitLoss'],
   opIncome: ['OperatingIncomeLoss'],
   pretax: ['IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest', 'IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments'],
   interest: ['InterestExpense', 'InterestExpenseNonoperating', 'InterestExpenseDebt'],
   grossProfit: ['GrossProfit'],
+  costOfRevenue: ['CostOfRevenue', 'CostOfGoodsAndServicesSold', 'CostOfGoodsSold', 'CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization'],
   ocf: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'],
   capex: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets'],
   da: ['DepreciationDepletionAndAmortization', 'DepreciationAndAmortization', 'DepreciationAmortizationAndAccretionNet', 'Depreciation'],
@@ -88,7 +107,16 @@ export function computeFundamentals(cf: any) {
   if (!asOf) return null;
   const yearAgo = new Date(Date.parse(asOf) - 365 * DAY + 10 * DAY).toISOString().slice(0, 10);
   const revP = T('revenue', yearAgo), niP = T('netIncome', yearAgo);
-  const opT = T('opIncome'), gpT = T('grossProfit'), ocfT = T('ocf'), capT = T('capex'), daT = T('da'), divT = T('dividends'), ptT = T('pretax'), intT = T('interest');
+  // latest quarter revenue vs the same quarter a year earlier
+  let revenueGrowthQ: number | null = null;
+  for (const c of candidates(f, C.revenue)) { const g = quarterGrowth(c.list, revT ? revT.end : asOf); if (g != null) { revenueGrowthQ = g; break; } }
+  // diluted EPS, trailing twelve months, and its change vs the prior twelve months
+  let epsT: { val: number; end: string } | null = null, epsP: { val: number; end: string } | null = null;
+  for (const c of candidates(f, ['EarningsPerShareDiluted', 'EarningsPerShareBasicAndDiluted', 'EarningsPerShareBasic'], 'USD/shares')) {
+    const a = ttm(c.list);
+    if (a && Math.abs(days(a.end, asOf)) < 40) { epsT = a; epsP = ttm(c.list, yearAgo); break; }
+  }
+  const opT = T('opIncome'), corT = T('costOfRevenue'), gpT0 = T('grossProfit'), ocfT = T('ocf'), capT = T('capex'), daT = T('da'), divT = T('dividends'), ptT = T('pretax'), intT = T('interest');
 
   const inst = (k: keyof typeof C) => instant(S(k)?.list);
   const eq = inst('equity'), assets = inst('assets'), ca = inst('curAssets'), cl = inst('curLiab'), cash = inst('cash');
@@ -117,6 +145,9 @@ export function computeFundamentals(cf: any) {
   }
 
   const v = (x: { val: number } | null) => (x ? x.val : null);
+  // gross profit: reported line, else revenue minus cost of revenue (same period only)
+  const gpT = gpT0 && revT && Math.abs(days(gpT0.end, revT.end)) < 40 ? gpT0
+    : revT && corT && Math.abs(days(corT.end, revT.end)) < 40 ? { val: revT.val - corT.val, end: revT.end } : null;
   const recent = (k: string) => { const c = candidates(f, [k])[0]; return !!c && Math.abs(days(c.list[c.list.length - 1].end, asOf)) < 400; };
   const isBank = recent('Deposits') || recent('InterestAndDividendIncomeOperating');
   const debt = (v(ltd) || 0) + (v(std) || 0);
@@ -130,7 +161,8 @@ export function computeFundamentals(cf: any) {
     revenueTTM: v(revT), netIncomeTTM: v(niT), operatingIncomeTTM: v(opT), grossProfitTTM: v(gpT),
     operatingCashFlowTTM: v(ocfT), capexTTM: v(capT), freeCashFlowTTM: ocfT && !isBank ? ocfT.val - (v(capT) || 0) : null,
     ebitdaTTM: daT && !isBank ? (opT ? opT.val + daT.val : ptT ? ptT.val + (v(intT) || 0) + daT.val : null) : null, dividendsTTM: v(divT),
-    revenueGrowth: growth(revT, revP), earningsGrowth: growth(niT, niP),
+    revenueGrowth: growth(revT, revP), earningsGrowth: growth(niT, niP), revenueGrowthQ,
+    epsTTM: v(epsT), epsGrowth: epsT && epsP && epsP.val > 0 ? epsT.val / epsP.val - 1 : null,
     equity: v(eq), assets: v(assets), currentAssets: v(ca), currentLiabilities: v(cl), cash: v(cash), debt: ltd || std ? debt : null,
     shares, isBank,
   };
