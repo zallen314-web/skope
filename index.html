@@ -206,6 +206,7 @@ canvas{width:100%!important;display:block;}
 .demo-banner{display:flex;gap:14px;align-items:center;justify-content:space-between;background:#eef3ef;border:1px solid #c9d8cd;border-left:3px solid var(--accent);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--text2);line-height:1.5;}.demo-banner .ghost-btn{flex-shrink:0;}
 .intro-cta.dark:hover{background:#2c5a46;}
 .intro-sec{padding:56px 28px;border-bottom:1px solid var(--border2);}
+.intro-sec h3.h-bold{font-weight:600;}
 .intro-sec h3{font-family:'Source Serif 4',Georgia,'Times New Roman',serif;font-size:26px;font-weight:400;margin-bottom:8px;letter-spacing:0;}
 .intro-sec .lead{color:var(--text2);font-size:15px;margin-bottom:28px;max-width:640px;}
 .intro-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
@@ -275,23 +276,23 @@ canvas{width:100%!important;display:block;}
   </div></section>
 
   <section class="intro-sec"><div class="intro-inner">
-    <h3>What it does</h3>
+    <h3 class="h-bold">What it does</h3>
     <p class="lead">Four ways to look closer at any US stock, ETF or portfolio.</p>
     <div class="intro-grid">
-      <div class="intro-card"><h4>What's driving returns</h4><p>Separate a return into market, size, value, quality and momentum exposure. What remains is alpha, the part a stock's style alone doesn't explain.</p></div>
-      <div class="intro-card"><h4>How it behaves under stress</h4><p>Compare actual return behavior with what standard models assume, including how often large drawdowns occur and how much downside a normal VaR misses.</p></div>
-      <div class="intro-card"><h4>How a portfolio fits together</h4><p>Combine holdings at your own weights to see their combined factor exposures, tracking error and information ratio against SPY, QQQ or IWM.</p></div>
-      <div class="intro-card"><h4>What you're paying for it</h4><p>Valuation multiples, margins and growth sit next to the factor results, so a stock's exposure and its price can be judged together.</p></div>
+      <div class="intro-card"><h4>1) What's driving returns</h4><p>Separate a return into market, size, value, quality and momentum exposure. What remains is alpha, the part a stock's style alone doesn't explain.</p></div>
+      <div class="intro-card"><h4>2) How it behaves under stress</h4><p>Compare actual return behavior with what standard models assume, including how often large drawdowns occur and how much downside a normal VaR misses.</p></div>
+      <div class="intro-card"><h4>3) How a portfolio fits together</h4><p>Combine holdings at your own weights to see their combined factor exposures, tracking error and information ratio against SPY, QQQ or IWM.</p></div>
+      <div class="intro-card"><h4>4) What you're paying for it</h4><p>Valuation multiples, margins and growth sit next to the factor results, so a stock's exposure and its price can be judged together.</p></div>
       <div class="intro-card" style="grid-column:1/-1"><h4>Reports by email</h4><p>Skope can send you a weekly or monthly report on your portfolio: performance against your benchmark, factor exposures, risk and concentration, and what has changed since the last report. No API key is needed to receive them.</p><a href="#" class="intro-link" onclick="openReports();return false">Set up email reports →</a></div>
     </div>
   </div></section>
 
   <section class="intro-sec"><div class="intro-inner">
-    <h3>Where the data comes from</h3>
+    <h3 class="h-bold">Where the data comes from</h3>
     <p class="lead">Prices and fundamentals are pulled live. Factor returns come from the standard academic source.</p>
     <div class="src-row"><b>Prices and fundamentals</b><span><a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Daily prices, valuation multiples and company details, requested from your browser with your own free API key (800 requests a day, no credit card).</span></div>
     <div class="src-row"><b>Factor returns</b><span><a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html" target="_blank">Kenneth R. French Data Library</a>, Tuck School of Business at Dartmouth. Daily and monthly Fama-French and momentum factors, included in this tool and current <span id="ff-asof-intro"></span>.</span></div>
-    <div class="src-row"><b>Your inputs</b><span>Your API key and saved tickers stay in this browser. Nothing is sent anywhere except the price requests to Twelve Data.</span></div>
+    <div class="src-row"><b>Your inputs</b><span>Your API key and saved tickers stay in this browser. Price requests go to Twelve Data. If you sign up for reports, your email and holdings are stored to send them, and unsubscribing deletes both.</span></div>
   </div></section>
 
   <section class="intro-sec" style="border-bottom:none"><div class="intro-inner">
