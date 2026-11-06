@@ -14621,7 +14621,7 @@ async function fetchFundamentals(ticker) {
     const pe = f && pos(f.netIncomeTTM) ? div(mcap, f.netIncomeTTM) : null;
     const ev = mcap!=null ? mcap + (f.debt||0) - (f.cash||0) : null;
     const out = {
-      source: f ? 'SEC' : null, demo: DEMO, periodEnd: f ? f.periodEnd : null, isBank: !!(f && f.isBank), noPrice: !!f && mcap==null,
+      source: f ? 'SEC' : null, secDown: !!(sec && sec.error) || sec===null, demo: DEMO, periodEnd: f ? f.periodEnd : null, isBank: !!(f && f.isBank), noPrice: !!f && mcap==null,
       // Valuation (live price × SEC trailing-twelve-month figures)
       trailingPE:      pe,
       pegRatio:        pe && f.earningsGrowth>0 ? pe/(f.earningsGrowth*100) : null,
@@ -14795,7 +14795,7 @@ function renderFundamentals(ticker, fund) {
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">
         Valuation Snapshot
-        <span style="font-weight:400;font-size:9px;color:var(--text3)">${isETF?'No SEC financial statements (ETFs, funds and most foreign companies) · showing price metrics':`${ticker} · ${fund.demo?'simulated financials':'financials from SEC filings through '+pd}${fund.noPrice?' · price multiples unavailable for this share class':''}${fund.isBank?' · bank: EV/EBITDA and FCF not meaningful':''}`}</span>
+        <span style="font-weight:400;font-size:9px;color:var(--text3)">${isETF?(fund.secDown?'Financial statements temporarily unavailable · try again in a minute':'No SEC financial statements (ETFs, funds and most foreign companies) · showing price metrics'):`${ticker} · ${fund.demo?'simulated financials':'financials from SEC filings through '+pd}${fund.noPrice?' · price multiples unavailable for this share class':''}${fund.isBank?' · bank: EV/EBITDA and FCF not meaningful':''}`}</span>
       </div>
       <div class="fund-grid" style="grid-template-columns:repeat(${isETF?2:3},1fr)">
         ${isETF ? '' : cards.join('')}

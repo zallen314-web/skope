@@ -157,10 +157,13 @@ export async function lookupCik(ticker: string, fetcher = fetch) {
 // The successor's early filings lack full-year history, so the predecessor's facts fill it in.
 const PREDECESSOR: Record<number, number> = { 2115436: 34088 }; // ExxonMobil Holdings <- Exxon Mobil Corp
 
-async function facts(cik: number, fetcher: typeof fetch) {
+async function facts(cik: number, fetcher: typeof fetch, tries = 2): Promise<any> {
   const r = await fetcher(`https://data.sec.gov/api/xbrl/companyfacts/CIK${String(cik).padStart(10, '0')}.json`, { headers: { 'User-Agent': SEC_UA } });
   if (r.status === 404) return null;
-  if (!r.ok) throw new Error(`SEC company facts HTTP ${r.status}`);
+  if (!r.ok) {
+    if (tries > 1) { await new Promise(res => setTimeout(res, 600)); return facts(cik, fetcher, tries - 1); }
+    throw new Error(`SEC company facts HTTP ${r.status}`);
+  }
   return r.json();
 }
 
