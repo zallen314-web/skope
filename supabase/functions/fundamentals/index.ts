@@ -20,7 +20,7 @@ Deno.serve(async req => {
     return reply(body);
   } catch (e) {
     console.error(t, e);
-    return json({ error: 'SEC data is temporarily unavailable.' }, 502);
+    return json({ error: 'SEC data is temporarily unavailable.', detail: String((e as Error)?.message || e) }, 502);
   }
 });
 
