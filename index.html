@@ -49,6 +49,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,'S
 .gl-ex td{padding:6px 8px 6px 0;border-bottom:1px solid var(--border2);vertical-align:top;font-variant-numeric:tabular-nums;}.gl-ex td:last-child{color:var(--text2);}.gl-ex-n{font-size:12.5px;color:var(--text2);margin-top:8px;}
 .gl-foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);}.gl-foot a{color:var(--accent);margin-left:6px;}
 .gl-hide{display:none!important;}
+.gl-steps{margin:4px 0 12px;padding-left:20px;font-size:14px;line-height:1.6;color:var(--text2);}.gl-steps li{margin-bottom:6px;}.gl-steps b{color:var(--text);}.gl-ex td.pos{color:#2e7d4f;}.gl-ex td.neg{color:#b23b3b;}.gl-ex tr.tot td{font-weight:600;border-top:1px solid var(--border);}
 .gloss-link{background:none;border:0;color:#fff;font:600 13px 'Inter',sans-serif;cursor:pointer;opacity:.9;padding:4px 8px;}.gloss-link:hover{opacity:1;text-decoration:underline;}
 .key-card{max-width:640px;margin:48px auto 60px;background:var(--surface);border-radius:6px;box-shadow:var(--shadow);padding:32px 34px;}
 .key-h{font-family:'Source Serif 4',Georgia,serif;font-size:26px;font-weight:400;margin-bottom:8px;}
@@ -388,7 +389,44 @@ canvas{width:100%!important;display:block;}
 <div id="gloss-page"><div class="gl-wrap">
   <div class="gl-top"><div><h2>Glossary</h2><p>Definitions, formulas, and how to read Skope's results.</p></div>
     <div class="gl-tools"><input type="search" id="gl-q" placeholder="Search terms…" oninput="glFilter(this.value)"><button class="ghost-btn" onclick="closeGlossary()">Back to Skope</button></div></div>
-  <nav class="gl-nav"><a href="#gl-read">Reading a regression</a><a href="#gl-factors">Factors</a><a href="#gl-risk">Returns &amp; risk</a><a href="#gl-scen">Scenarios &amp; macro</a><a href="#gl-val">Valuation</a></nav>
+  <nav class="gl-nav"><a href="#gl-walk">Worked example</a><a href="#gl-read">Reading a regression</a><a href="#gl-factors">Factors</a><a href="#gl-risk">Returns &amp; risk</a><a href="#gl-scen">Scenarios &amp; macro</a><a href="#gl-val">Valuation</a></nav>
+
+  <section id="gl-walk" class="gl-sec"><h3>Worked example: beating the market without alpha</h3>
+    <p class="gl-p">A hypothetical portfolio returned <b>14.8% a year</b> over five years while the S&amp;P 500 returned 11.5%. That looks like 3.3 points of outperformance. Here is how Skope breaks it down.</p>
+    <div class="gl-ex"><div class="gl-ex-h">Step 1: Where the return came from (Factors tab, attribution)</div>
+      <table><thead><tr><th>Source</th><th>β</th><th>Contribution / yr</th><th>Reading</th></tr></thead><tbody>
+        <tr><td>Cash (risk-free rate)</td><td></td><td>2.0%</td><td>What T-bills paid with no risk.</td></tr>
+        <tr><td>Market</td><td><b>1.30</b></td><td class="pos">+12.4%</td><td>30% more market exposure than an index fund. In a rising market, that alone beats the index.</td></tr>
+        <tr><td>Momentum (MOM)</td><td><b>0.35</b></td><td class="pos">+0.5%</td><td>Tilted toward recent winners while they kept winning.</td></tr>
+        <tr><td>Value (HML)</td><td><b>−0.40</b></td><td class="pos">+0.4%</td><td>A growth tilt, during years when growth beat value.</td></tr>
+        <tr><td>Size (SMB)</td><td>0.20</td><td class="pos">+0.1%</td><td>Slight small-cap lean. Not significant.</td></tr>
+        <tr><td>Alpha</td><td></td><td class="neg">−0.6%</td><td>t-stat −0.3: indistinguishable from zero.</td></tr>
+        <tr class="tot"><td>Total</td><td></td><td>14.8%</td><td></td></tr>
+      </tbody></table>
+      <div class="gl-ex-n">Every point of the outperformance is explained by known exposures. None of it is alpha.</div></div>
+    <div class="gl-ex"><div class="gl-ex-h">Step 2: What that exposure cost (Risk tab)</div>
+      <table><thead><tr><th>Measure</th><th>Portfolio</th><th>S&amp;P 500</th><th>Reading</th></tr></thead><tbody>
+        <tr><td>Volatility</td><td>21.0%</td><td>15.5%</td><td>About a third more swing, year to year.</td></tr>
+        <tr><td>Sharpe ratio</td><td>0.61</td><td>0.61</td><td>The same return per unit of risk. The extra return was paid for with extra risk.</td></tr>
+        <tr><td>Max drawdown</td><td class="neg">−34%</td><td class="neg">−24%</td><td>A deeper fall from peak to trough.</td></tr>
+        <tr><td>Downside capture</td><td>128%</td><td>100%</td><td>Falls about 28% more than the market in down months.</td></tr>
+      </tbody></table></div>
+    <div class="gl-ex"><div class="gl-ex-h">Step 3: What happens when the market turns (Scenarios tab)</div>
+      <table><thead><tr><th>Scenario</th><th>Portfolio</th><th>S&amp;P 500</th></tr></thead><tbody>
+        <tr><td>Market −20%</td><td class="neg">about −26%</td><td class="neg">−20%</td></tr>
+        <tr><td>Momentum reversal (MOM −15%)</td><td class="neg">about −5% more</td><td>roughly unaffected</td></tr>
+      </tbody></table>
+      <div class="gl-ex-n">The same betas that added return on the way up subtract it on the way down.</div></div>
+    <p class="gl-p"><b>The takeaway:</b> the portfolio beat the market because it held more of the market, plus a few style bets that happened to pay off. A low-cost index fund with about 30% more market exposure would have produced nearly the same result. Genuine skill shows up as <b>positive alpha with a t-stat of 2 or more</b>, across a long enough period.</p>
+    <p class="gl-p" style="margin-top:14px"><b>Checking your own portfolio</b></p>
+    <ol class="gl-steps">
+      <li><b>Performance:</b> compare the return to the benchmark. Beating it is the start of the question, not the answer.</li>
+      <li><b>Factors:</b> check market beta. Above 1 means amplified market exposure; that alone can explain outperformance in a rising market.</li>
+      <li><b>Attribution:</b> see how much of the return came from factors and how much is left as alpha.</li>
+      <li><b>Alpha:</b> check its t-stat. Below 2, it can't be told apart from luck.</li>
+      <li><b>Risk:</b> compare volatility, Sharpe, drawdown and downside capture with the benchmark. Similar Sharpe with higher volatility means more risk, not more skill.</li>
+      <li><b>Scenarios:</b> see what a market drop would do to the portfolio before it happens.</li>
+    </ol></section>
 
   <section id="gl-read" class="gl-sec"><h3>How to read a factor regression</h3>
     <p class="gl-p">Skope explains a stock's or portfolio's excess return (its return above cash) with a set of factor returns:</p>
