@@ -137,21 +137,25 @@ export function computeFundamentals(cf: any) {
 }
 
 // ── network ──────────────────────────────────────────────────────────────────
-let TICKERS: Record<string, { cik: number; title: string }> | null = null;
-let TICKERS_AT = 0;
+import TICKER_MAP from './tickers.json' with { type: 'json' };
+
+// Ticker -> CIK from the bundled map (refreshed weekly); the live SEC list is only a fallback
+// for tickers listed since the last refresh, because sec.gov rate-limits shared cloud servers.
+let LIVE: Record<string, number> | null = null;
+let LIVE_AT = 0;
 
 export async function lookupCik(ticker: string, fetcher = fetch) {
-  if (!TICKERS || Date.now() - TICKERS_AT > DAY) {
-    let r = await fetcher('https://www.sec.gov/files/company_tickers.json', { headers: { 'User-Agent': SEC_UA } });
-    if (!r.ok) { await new Promise(res => setTimeout(res, 800)); r = await fetcher('https://www.sec.gov/files/company_tickers.json', { headers: { 'User-Agent': SEC_UA } }); }
-    if (!r.ok) throw new Error(`SEC ticker list HTTP ${r.status}`);
-    const j = await r.json();
-    TICKERS = {};
-    for (const k of Object.keys(j)) TICKERS[String(j[k].ticker).toUpperCase()] = { cik: j[k].cik_str, title: j[k].title };
-    TICKERS_AT = Date.now();
+  const t = ticker.toUpperCase(), keys = [t, t.replace('.', '-'), t.replace('-', '.')];
+  const M = TICKER_MAP as Record<string, number>;
+  for (const k of keys) if (M[k]) return { cik: M[k] };
+  if (!LIVE || Date.now() - LIVE_AT > DAY) {
+    try {
+      const r = await fetcher('https://www.sec.gov/files/company_tickers.json', { headers: { 'User-Agent': SEC_UA } });
+      if (r.ok) { const j = await r.json(); LIVE = {}; for (const k of Object.keys(j)) LIVE[String(j[k].ticker).toUpperCase()] = j[k].cik_str; LIVE_AT = Date.now(); }
+    } catch { /* fall through */ }
   }
-  const t = ticker.toUpperCase();
-  return TICKERS[t] || TICKERS[t.replace('.', '-')] || TICKERS[t.replace('-', '.')] || null;
+  for (const k of keys) if (LIVE?.[k]) return { cik: LIVE[k] };
+  return null;
 }
 
 // Companies that re-registered under a new holding company: successor CIK -> predecessor CIK.

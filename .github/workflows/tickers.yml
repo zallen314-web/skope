@@ -1,0 +1,40 @@
+name: Refresh SEC ticker map
+
+# Weekly: update the bundled ticker -> CIK map and redeploy the fundamentals function if it changed.
+on:
+  schedule:
+    - cron: '23 9 * * 0'   # Sundays 09:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Download SEC ticker list
+        run: node reports/update-tickers.mjs
+      - name: Commit if changed
+        id: commit
+        run: |
+          if git diff --quiet -- supabase/functions/_shared/tickers.json; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git config user.name "skope-bot"
+          git config user.email "skope-bot@users.noreply.github.com"
+          git add supabase/functions/_shared/tickers.json
+          git commit -m "Refresh SEC ticker map"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - uses: supabase/setup-cli@v1
+        if: steps.commit.outputs.changed == 'true'
+        with:
+          version: latest
+      - name: Redeploy functions
+        if: steps.commit.outputs.changed == 'true' && env.SUPABASE_ACCESS_TOKEN != ''
+        run: supabase functions deploy --project-ref zgsenoktxhovmwpwiesi --no-verify-jwt --yes
