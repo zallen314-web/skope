@@ -142,7 +142,8 @@ let TICKERS_AT = 0;
 
 export async function lookupCik(ticker: string, fetcher = fetch) {
   if (!TICKERS || Date.now() - TICKERS_AT > DAY) {
-    const r = await fetcher('https://www.sec.gov/files/company_tickers.json', { headers: { 'User-Agent': SEC_UA } });
+    let r = await fetcher('https://www.sec.gov/files/company_tickers.json', { headers: { 'User-Agent': SEC_UA } });
+    if (!r.ok) { await new Promise(res => setTimeout(res, 800)); r = await fetcher('https://www.sec.gov/files/company_tickers.json', { headers: { 'User-Agent': SEC_UA } }); }
     if (!r.ok) throw new Error(`SEC ticker list HTTP ${r.status}`);
     const j = await r.json();
     TICKERS = {};

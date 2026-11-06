@@ -14610,7 +14610,7 @@ async function fetchFundamentals(ticker) {
   try {
     const [quote, sec] = await Promise.all([
       fetch(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(ticker)}&apikey=${apiKey}`).then(r=>r.json()).catch(()=>({})),
-      fetch(`${SKOPE_API}/fundamentals?ticker=${encodeURIComponent(ticker)}`).then(r=>r.json()).catch(()=>null)
+      (async()=>{const u=`${SKOPE_API}/fundamentals?ticker=${encodeURIComponent(ticker)}`;for(let i=0;i<2;i++){try{const r=await fetch(u);const j=await r.json();if(r.ok||i===1)return j;}catch(e){if(i===1)return null;}await new Promise(z=>setTimeout(z,900));}return null;})()
     ]);
     const f = sec && sec.ok ? sec.data : null, q52 = quote.fifty_two_week || {};
     const price = parseFloat(quote.close) || parseFloat(quote.previous_close) || null;
