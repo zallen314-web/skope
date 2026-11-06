@@ -45,8 +45,9 @@ Deno.serve(async req => {
     body = { ok: true, ticker: t, series, quote };
     CACHE.set(t, { at: Date.now(), body });
   }
+  let saved = true;
   try {
     await db('demo_usage?on_conflict=day,visitor', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ day, visitor, n: mine + 1 }) });
-  } catch (e) { console.error('usage write', e); }
-  return json(body);
+  } catch (e) { saved = false; console.error('usage write', e); }
+  return json({ ...body, usage: { runs: mine + 1, of: PER_VISITOR, saved, v: visitor.slice(0, 6) } });
 });
