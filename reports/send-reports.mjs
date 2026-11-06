@@ -59,6 +59,8 @@ const isDue = (s, today) => s.frequency === 'weekly' || today.getUTCDate() <= 7;
 async function main() {
   const today = new Date();
   let subs = await db('subscribers?confirmed=eq.true&select=id,email,frequency,benchmark,holdings,unsubscribe_token');
+  const pending = await db('subscribers?confirmed=eq.false&select=email,created_at');
+  if (pending.length) log(`${pending.length} sign-up(s) waiting for email confirmation: ${pending.map(p => p.email.replace(/^(.).*(@.*)$/, '$1***$2') + ' (' + p.created_at.slice(0, 16) + ')').join(', ')}`);
   if (ONLY) subs = subs.filter(s => s.email.toLowerCase() === ONLY);
   if (!FORCE) subs = subs.filter(s => isDue(s, today));
   log(`${subs.length} subscriber(s) to process${DRY ? ' (dry run)' : ''}`);
