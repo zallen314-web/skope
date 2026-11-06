@@ -2,7 +2,7 @@
 import { FACTOR_LABEL } from './core.mjs';
 
 const G = '#1d4433', INK = '#111111', MUT = '#6a6f6b', RULE = '#dfe3df', POS = '#2e7d4f', NEG = '#a12a2a';
-const SERIF = "Georgia,'Times New Roman',serif", SANS = "-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
+const SERIF = "'Source Serif 4',Georgia,'Times New Roman',serif", SANS = "-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const pc = (v, d = 1) => { if (v == null || !isFinite(v)) return '—'; const a = Math.abs(v * 100).toFixed(d); return +a === 0 ? `${a}%` : `${v >= 0 ? '+' : '−'}${a}%`; };
 const fx = (v, d = 2) => (v < 0 && +Math.abs(v).toFixed(d) !== 0 ? '−' : '') + Math.abs(v).toFixed(d);
@@ -48,7 +48,7 @@ export function buildEmail(m, { siteUrl, unsubscribeUrl, ffThrough }) {
 
   const hRows = m.perHolding.map(h => `<tr>${td(`<b>${esc(h.ticker)}</b>`)}${td(pcu(h.weight), { right: true })}${td(pc(h.period), { right: true, color: col(h.period) })}${td(h.beta == null ? '—' : fx(h.beta), { right: true })}${td(esc(h.tilt), { right: true, color: MUT })}</tr>`).join('');
 
-  return `<!doctype html><html><body style="margin:0;background:#f4f5f3">
+  return `<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet"></head><body style="margin:0;background:#f4f5f3">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f3;padding:24px 0"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff">
   <tr><td style="background:${G};padding:22px 32px">
