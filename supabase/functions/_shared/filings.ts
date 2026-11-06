@@ -145,12 +145,14 @@ export async function getHighlights(cik: number, fetcher = fetch) {
   const earn = fl.find(f => f.form === '8-K' && f.items.includes('2.02'));
   let tenK = fl.find(f => f.form === '10-K' || f.form === '10-K405'), kCik = cik;
   if (!tenK && PREDECESSOR[cik]) { kCik = PREDECESSOR[cik]; tenK = (await recentFilings(kCik, fetcher)).find(f => f.form === '10-K'); }
+  const errors: string[] = [];
   const [earnings, risks] = await Promise.all([
-    earn ? earningsRelease(cik, earn, fetcher).catch(() => null) : null,
-    tenK ? get(filingUrl(kCik, tenK), fetcher, 'text').then(h => parseRisks(h)).catch(() => null) : null,
+    earn ? earningsRelease(cik, earn, fetcher).catch(e => (errors.push('earnings: ' + e.message), null)) : null,
+    tenK ? get(filingUrl(kCik, tenK), fetcher, 'text').then(h => parseRisks(h)).catch(e => (errors.push('risks: ' + e.message), null)) : null,
   ]);
   return {
     earnings,
     risks: risks ? { date: tenK!.date, url: filingUrl(kCik, tenK!), items: risks } : null,
+    errors,
   };
 }

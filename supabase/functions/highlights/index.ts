@@ -19,8 +19,8 @@ Deno.serve(async req => {
     if (!c) return reply({ ok: false, reason: 'No SEC filings for this ticker.' });
     const h = await getHighlights(c.cik);
     const body = { ok: true, data: { ticker: t, ...h } };
-    CACHE.set(t, { at: Date.now(), body });
-    return reply(body);
+    if (!h.errors.length) CACHE.set(t, { at: Date.now(), body });
+    return h.errors.length ? new Response(JSON.stringify(body), { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }) : reply(body);
   } catch (e) {
     console.error(t, e);
     return json({ error: 'SEC filings are temporarily unavailable.', detail: String((e as Error)?.message || e) }, 502);
