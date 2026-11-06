@@ -15064,7 +15064,13 @@ function saveNamedPortfolio(){
   const name=(prompt('Name this portfolio',cur||'My portfolio')||'').trim().slice(0,60);if(!name)return;
   const l=loadPFs().filter(p=>p.name!==name);
   l.unshift({name,rows:portfolioRows.map(r=>({ticker:r.ticker,name:r.name||r.ticker,weight:+r.weight})),bench:document.getElementById('p-bench').value,updated:new Date().toISOString()});
-  savePFs(l);document.getElementById('pf-select').value=name;toast(USER?`✓ Saved "${name}" to your account`:`✓ Saved "${name}" in this browser. Sign in to keep it on every device.`);
+  savePFs(l);
+  // clean slate for the next portfolio (the saved one is in the dropdown)
+  portfolioRows=[];savePort();renderWeightRows();updateWeightBar();
+  document.getElementById('pf-select').value='';
+  document.getElementById('p-output').innerHTML='<div class="empty">Build portfolio on the left<br><div class="small">Add tickers · Set weights (sum to 100%) · Run</div></div>';
+  window.LAST_PORT=null;
+  toast(USER?`✓ Saved "${name}" to your account`:`✓ Saved "${name}" in this browser. Sign in to keep it on every device.`);
 }
 function loadSavedPortfolio(name){const p=loadPFs().find(x=>x.name===name);if(!p)return;
   portfolioRows=p.rows.map(r=>({...r}));savePort();renderWeightRows();updateWeightBar();
