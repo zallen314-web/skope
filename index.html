@@ -155,7 +155,7 @@ canvas{width:100%!important;display:block;}
 .sv-btn{display:flex;align-items:center;gap:6px;background:none;border:1.5px solid var(--accent);color:var(--accent);border-radius:5px;padding:7px 14px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0;}
 .sv-btn:hover{background:var(--accent);color:#fff;}.sv-btn.saved{background:#e7f2ea;border-color:var(--green);color:var(--green);cursor:default;}
 /* Portfolio */
-.port-panel{background:var(--surface);border-radius:6px;box-shadow:var(--shadow);position:sticky;top:20px;}
+.port-panel{background:var(--surface);border-radius:6px;box-shadow:var(--shadow);}
 .port-hdr{padding:14px 16px 12px;border-bottom:1px solid var(--border2);}
 .port-title{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:2px;}
 .port-sub{font-size:11px;color:var(--text2);}
@@ -212,6 +212,7 @@ canvas{width:100%!important;display:block;}
 .intro-card{border:1px solid var(--border);border-radius:6px;padding:22px;}
 .intro-card h4{font-family:'Source Serif 4',Georgia,'Times New Roman',serif;font-size:18px;font-weight:600;margin-bottom:8px;}
 .intro-card p{font-size:14px;color:var(--text2);line-height:1.6;}
+.intro-link{display:inline-block;margin-top:12px;font-size:14px;font-weight:600;color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;}
 .src-row{display:grid;grid-template-columns:220px 1fr;gap:20px;padding:16px 0;border-top:1px solid var(--border2);font-size:14px;}
 .src-row:last-child{border-bottom:1px solid var(--border2);}
 .src-row b{font-weight:600;}
@@ -282,6 +283,7 @@ canvas{width:100%!important;display:block;}
       <div class="intro-card"><h4>How it behaves under stress</h4><p>Compare actual return behavior with what standard models assume, including how often large drawdowns occur and how much downside a normal VaR misses.</p></div>
       <div class="intro-card"><h4>How a portfolio fits together</h4><p>Combine holdings at your own weights to see their combined factor exposures, tracking error and information ratio against SPY, QQQ or IWM.</p></div>
       <div class="intro-card"><h4>What you're paying for it</h4><p>Valuation multiples, margins and growth sit next to the factor results, so a stock's exposure and its price can be judged together.</p></div>
+      <div class="intro-card" style="grid-column:1/-1"><h4>Reports by email</h4><p>Skope can send you a weekly or monthly report on your portfolio: performance against your benchmark, factor exposures, risk and concentration, and what has changed since the last report. No API key is needed to receive them.</p><a href="#" class="intro-link" onclick="openReports();return false">Set up email reports →</a></div>
     </div>
   </div></section>
 
@@ -14411,7 +14413,7 @@ document.addEventListener('DOMContentLoaded',()=>{const f=document.getElementByI
 document.addEventListener('DOMContentLoaded',()=>{const e=document.getElementById('ff-asof');if(e&&!e.textContent){const d=FF_EMBED_ASOF;e.textContent='through '+new Date(d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6)+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});}});
 </script>
 <script>
-const PAL=['#1d4433','#111111','#4a6fa5','#8da9c4','#5c6370','#1d3d6b','#a5aaa6','#2f3338','#6c87b0','#c9d1cb'];
+const PAL=['#1d4433','#4a78b5','#c8902e','#a8483a','#7fa98a','#6e4f8a','#3a3f44','#d9b97a','#5f9ea0','#b07aa1'];
 const CACHE={};
 let curInfo=null, selTickers=new Set(), portfolioRows=[];
 const WL_KEY='factor_lab_v1', PORT_KEY='factor_lab_port_v1', KEY_KEY='factor_lab_apikey';
@@ -14839,11 +14841,17 @@ async function buildAQR(outputsize){const ck=`aqr_${outputsize}`;if(CACHE[ck])re
 function ols(y,Xcols){const n=y.length,k=Xcols.length,p=k+1;const X=Array(n).fill(0).map((_,t)=>[1,...Xcols.map(c=>c[t])]);const XtX=Array(p).fill(0).map(()=>Array(p).fill(0)),Xty=Array(p).fill(0);for(let t=0;t<n;t++)for(let i=0;i<p;i++){Xty[i]+=X[t][i]*y[t];for(let j=0;j<p;j++)XtX[i][j]+=X[t][i]*X[t][j];}const inv=invM(XtX),beta=Array(p).fill(0);for(let i=0;i<p;i++)for(let j=0;j<p;j++)beta[i]+=inv[i][j]*Xty[j];let rss=0,tss=0;const ybar=y.reduce((a,b)=>a+b,0)/n,resid=[];for(let t=0;t<n;t++){let yh=0;for(let i=0;i<p;i++)yh+=X[t][i]*beta[i];const e=y[t]-yh;resid.push(e);rss+=e*e;tss+=(y[t]-ybar)**2;}const r2=1-rss/tss,adjR2=1-(1-r2)*(n-1)/(n-k-1),s2=rss/(n-k-1);const se=Array(p).fill(0).map((_,i)=>Math.sqrt(Math.max(0,s2*inv[i][i])));const ts2=beta.map((b,i)=>b/se[i]),pv=ts2.map(t=>2*(1-nCDF(Math.abs(t))));return{resid,alpha:beta[0],betas:beta.slice(1),alphaSE:se[0],se:se.slice(1),alphaTStat:ts2[0],tStats:ts2.slice(1),alphaPVal:pv[0],pValues:pv.slice(1),r2,adjR2,n,k,fStat:((tss-rss)/k)/(rss/(n-k-1))};}
 function invM(M){const n=M.length;const a=M.map((r,i)=>[...r,...Array(n).fill(0).map((_,j)=>j===i?1:0)]);for(let c=0;c<n;c++){let mr=c;for(let r=c+1;r<n;r++)if(Math.abs(a[r][c])>Math.abs(a[mr][c]))mr=r;[a[c],a[mr]]=[a[mr],a[c]];const p=a[c][c];if(Math.abs(p)<1e-14)continue;for(let j=0;j<2*n;j++)a[c][j]/=p;for(let r=0;r<n;r++)if(r!==c){const f=a[r][c];for(let j=0;j<2*n;j++)a[r][j]-=f*a[c][j];}}return a.map(r=>r.slice(n));}
 function nCDF(z){const t=1/(1+0.2316419*z),p=t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return 1-(1/Math.sqrt(2*Math.PI))*Math.exp(-0.5*z*z)*p;}
-function dStat(rets,annF=252){const n=rets.length,m=rets.reduce((a,b)=>a+b,0)/n,v=rets.reduce((a,b)=>a+(b-m)**2,0)/(n-1),std=Math.sqrt(v);const sk=rets.reduce((a,b)=>a+((b-m)/std)**3,0)/n,ku=rets.reduce((a,b)=>a+((b-m)/std)**4,0)/n-3;let pk=1,nv=1,mdd=0;for(const r of rets){nv*=(1+r);if(nv>pk)pk=nv;const d=(nv-pk)/pk;if(d<mdd)mdd=d;}const am=Math.pow(rets.reduce((a,b)=>a*(1+b),1),annF/n)-1;const sorted=[...rets].sort((a,b)=>a-b);const var95=sorted[Math.floor(n*0.05)]||0,cvar95=sorted.slice(0,Math.floor(n*0.05)).reduce((a,b)=>a+b,0)/Math.floor(n*0.05)||0;return{mean:m,std,annMean:am,annStd:std*Math.sqrt(annF),sharpe:am/(std*Math.sqrt(annF)),maxDD:mdd,skew:sk,kurt:ku,n,var95,cvar95};}
+function dStat(rets,annF=252,rf=null){const n=rets.length,m=rets.reduce((a,b)=>a+b,0)/n,v=rets.reduce((a,b)=>a+(b-m)**2,0)/(n-1),std=Math.sqrt(v);const sk=rets.reduce((a,b)=>a+((b-m)/std)**3,0)/n,ku=rets.reduce((a,b)=>a+((b-m)/std)**4,0)/n-3;let pk=1,nv=1,mdd=0;for(const r of rets){nv*=(1+r);if(nv>pk)pk=nv;const d=(nv-pk)/pk;if(d<mdd)mdd=d;}const am=Math.pow(rets.reduce((a,b)=>a*(1+b),1),annF/n)-1;const sorted=[...rets].sort((a,b)=>a-b);const var95=sorted[Math.floor(n*0.05)]||0,cvar95=sorted.slice(0,Math.floor(n*0.05)).reduce((a,b)=>a+b,0)/Math.floor(n*0.05)||0;return{mean:m,std,annMean:am,annStd:std*Math.sqrt(annF),sharpe:((m-(rf&&rf.length===n?rf.reduce((a,b)=>a+b,0)/n:0))*annF)/(std*Math.sqrt(annF)),maxDD:mdd,skew:sk,kurt:ku,n,var95,cvar95};}
 function pct(v,d=2){return(v*100).toFixed(d)+'%';}
 // ── Portfolio insights, email reports, report links (v-reports) ───────────────
 const SKOPE_API='https://zgsenoktxhovmwpwiesi.supabase.co/functions/v1';
 const P_FLABEL={'Mkt-RF':'Market',SMB:'Size (SMB)',HML:'Value (HML)',RMW:'Profitability (RMW)',CMA:'Investment (CMA)',MOM:'Momentum (MOM)',QMJ:'Quality (QMJ)',BAB:'Low-beta (BAB)'};
+function riskSentence(P){
+  const B=P.bBeta,bn=P.bench,f1=v=>Math.abs(v).toFixed(1);
+  if(!B)return`Not enough overlapping history with ${bn} to measure sensitivity.`;
+  const lo=B.b-1.96*B.se,hi=B.b+1.96*B.se;
+  return`Beta vs ${bn} <b>${B.b.toFixed(2)}</b> (95% range ${lo.toFixed(2)} to ${hi.toFixed(2)}). On average, a 10% fall in ${bn} has gone with a <b>${f1(lo*10)}% to ${f1(hi*10)}%</b> fall here. Single episodes can differ: ${bn} explains ${(B.r2*100).toFixed(0)}% of this portfolio's moves.`;
+}
 function portInsightsHTML(P){
   const {weights,model,result:r,annF,factors,bench}=P,fn=FN[model],mn=a=>a.reduce((s,x)=>s+x,0)/a.length;
   const fm=v=>`${v>=0?'+':'−'}${Math.abs(v*100).toFixed(1)}%`;
@@ -14864,7 +14872,7 @@ function portInsightsHTML(P){
     <div class="two-col" style="margin-bottom:0">
       <div><div class="pi-h">Where your returns came from <span class="pi-note">(annualized, above cash)</span></div>${attrRows}
         <div class="pi-note" style="margin-top:6px">Each factor's beta × its average return over the period. Factors explain ${(r.r2*100).toFixed(0)}% of return variation.</div></div>
-      <div><div class="pi-h">Risk</div><p class="pi-p">If the market falls 10%, a market beta of <b>${mb.toFixed(2)}</b> implies roughly a <b>${(mb*10).toFixed(1)}%</b> drop.</p>
+      <div><div class="pi-h">Risk</div><p class="pi-p">${riskSentence(P)}</p>
         <div class="pi-h">Concentration</div><p class="pi-p">Largest holding <b>${(ws[0]*100).toFixed(1)}%</b> · top 3 <b>${(ws.slice(0,3).reduce((s,x)=>s+x,0)*100).toFixed(1)}%</b> · effectively <b>${effN.toFixed(1)}</b> holdings of ${weights.length}.</p>
         <div class="pi-h">What changed</div><div class="pi-p">${drift}</div></div>
     </div></div>`;
@@ -14901,6 +14909,11 @@ function showNotice(title,body,buttons){
   const row=w.querySelector('.row'),close=()=>w.remove();
   (buttons||[{label:'Continue to Skope',cls:'pri'}]).forEach(b=>{const el=document.createElement('button');el.className=b.cls||'sec';el.textContent=b.label;el.onclick=()=>b.run?b.run(el,w,close):close();row.appendChild(el);});
   w.addEventListener('click',e=>{if(e.target===w)close();});document.body.appendChild(w);return w;
+}
+function openReports(){
+  showApp();switchTab('portfolio');
+  setTimeout(()=>{const e=document.getElementById('sub-email');if(!e)return;e.closest('.card').scrollIntoView({behavior:'smooth',block:'center'});e.focus({preventScroll:true});
+    if(!portfolioRows.length)toast('Add your holdings and weights above, then enter your email.');},120);
 }
 function handleEmailLinks(){
   const q=new URLSearchParams(location.search),st=q.get('status'),un=q.get('unsubscribe');
@@ -15161,7 +15174,7 @@ async function regress(ticker,model,outputsize,freq,ffData,momData,aqrData){
   const Xm={capm:[mkt],ff3:[mkt,smb,hml],ff5:[mkt,smb,hml,rmw,cma],ff5mom:[mkt,smb,hml,rmw,cma,mom],qmj:[mkt,smb,hml,rmw,cma,qmj],kitchen:[mkt,smb,hml,rmw,cma,mom,qmj,bab]};
   const result=ols(y,Xm[model]);
   const rawRets=y.map((e,i)=>e+rf[i]),mktRaw=mkt.map((e,i)=>e+rf[i]);
-  return{result,rawRets,mktRaw,st:dStat(rawRets,annF),annF,meta:{name:stock.name,exchange:stock.exchange,type:stock.type}};
+  return{result,rawRets,mktRaw,st:dStat(rawRets,annF,rf),annF,meta:{name:stock.name,exchange:stock.exchange,type:stock.type}};
 }
 
 // ── Individual ────────────────────────────────────────────────────────────────
@@ -15324,18 +15337,23 @@ async function runPortfolio(){
     const blended=[];for(const date of commonDates){let portRet=0,valid=true;for(const{ticker,w}of weights){const row=series[ticker].find(r=>r.date===date);if(!row){valid=false;break;}portRet+=w*row.ret;}if(valid)blended.push({date,ym:date.slice(0,6),ret:portRet});}
     upP('blend','ok',`${blended.length} ${freq} observations blended`);
     upP('reg','loading','OLS...');setS('p','Regressing...','active');
-    const RF=0.0525/252;let y=[],mkt=[],smb=[],hml=[],rmw=[],cma=[],mom=[],qmj2=[],bab=[],rf=[];
+    const RF=0.0525/252;let y=[],mkt=[],smb=[],hml=[],rmw=[],cma=[],mom=[],qmj2=[],bab=[],rf=[],dts=[];
     const nM2=['ff5mom','kitchen'].includes(model),nA2=['qmj','kitchen'].includes(model);
-    if(ffData){const sm={};blended.forEach(r=>{sm[r.date]=r.ret;});for(const d of Object.keys(ffData).sort()){const ff=ffData[d],sr=sm[d];if(sr===undefined||!ff||!isFinite(ff.mkt_rf))continue;const ym=d.slice(0,6);if(nA2&&!aqrData?.[ym])continue;if(nM2&&!momData?.[d])continue;y.push(sr-ff.rf);mkt.push(ff.mkt_rf);smb.push(ff.smb||0);hml.push(ff.hml||0);rmw.push(ff.rmw||0);cma.push(ff.cma||0);rf.push(ff.rf);mom.push(nM2&&momData?.[d]?momData[d].mom:0);if(nA2&&aqrData){const a=aqrData[ym]||{};qmj2.push(a.qmj||0);bab.push(a.bab||0);}}}
-    else{const spy=await fetchTwelvedata('SPY',outputsize);const mk={};spy.daily.forEach(r=>{mk[r.date]=r.ret;});for(const{date,ret}of blended){if(mk[date]===undefined)continue;y.push(ret-RF);mkt.push(mk[date]-RF);smb.push(0);hml.push(0);rmw.push(0);cma.push(0);rf.push(RF);mom.push(0);qmj2.push(0);bab.push(0);}}
+    if(ffData){const sm={};blended.forEach(r=>{sm[r.date]=r.ret;});for(const d of Object.keys(ffData).sort()){const ff=ffData[d],sr=sm[d];if(sr===undefined||!ff||!isFinite(ff.mkt_rf))continue;const ym=d.slice(0,6);if(nA2&&!aqrData?.[ym])continue;if(nM2&&!momData?.[d])continue;dts.push(d);y.push(sr-ff.rf);mkt.push(ff.mkt_rf);smb.push(ff.smb||0);hml.push(ff.hml||0);rmw.push(ff.rmw||0);cma.push(ff.cma||0);rf.push(ff.rf);mom.push(nM2&&momData?.[d]?momData[d].mom:0);if(nA2&&aqrData){const a=aqrData[ym]||{};qmj2.push(a.qmj||0);bab.push(a.bab||0);}}}
+    else{const spy=await fetchTwelvedata('SPY',outputsize);const mk={};spy.daily.forEach(r=>{mk[r.date]=r.ret;});for(const{date,ret}of blended){if(mk[date]===undefined)continue;dts.push(date);y.push(ret-RF);mkt.push(mk[date]-RF);smb.push(0);hml.push(0);rmw.push(0);cma.push(0);rf.push(RF);mom.push(0);qmj2.push(0);bab.push(0);}}
     if(y.length<20)throw new Error('Too few aligned observations');
     const Xm2={capm:[mkt],ff3:[mkt,smb,hml],ff5:[mkt,smb,hml,rmw,cma],ff5mom:[mkt,smb,hml,rmw,cma,mom],qmj:[mkt,smb,hml,rmw,cma,qmj2],kitchen:[mkt,smb,hml,rmw,cma,mom,qmj2,bab]};
-    const result=ols(y,Xm2[model]);const rawRets=y.map((e,i)=>e+rf[i]),mktRaw=mkt.map((e,i)=>e+rf[i]);const st=dStat(rawRets,annF);
-    const benchRets=(isD?benchData.daily:benchData.monthly).map(r=>r.ret);const benchSt=dStat(benchRets,annF);
+    const result=ols(y,Xm2[model]);const rawRets=y.map((e,i)=>e+rf[i]),mktRaw=mkt.map((e,i)=>e+rf[i]);const st=dStat(rawRets,annF,rf);
+    // benchmark aligned to the same dates as the portfolio (needed for tracking error, IR and beta)
+    const bm={};(isD?benchData.daily:benchData.monthly).forEach(r=>{bm[r.date]=r.ret;});
+    const bi=dts.map((d,i)=>bm[d]===undefined?-1:i).filter(i=>i>=0);
+    const pA=bi.map(i=>rawRets[i]),bA=bi.map(i=>bm[dts[i]]),rfA=bi.map(i=>rf[i]);
+    const benchRets=bA,benchSt=dStat(bA,annF,rfA);
+    let bBeta=null;if(bA.length>=20){const rb=ols(pA.map((r,i)=>r-rfA[i]),[bA.map((r,i)=>r-rfA[i])]);bBeta={b:rb.betas[0],se:rb.se[0],r2:rb.r2,n:rb.n};}
     upP('reg','ok',`${result.n} obs · R²=${(result.r2*100).toFixed(1)}%`);
     setS('p',`Portfolio · R²=${(result.r2*100).toFixed(1)}% · α=${pct(result.alpha*annF)}${stars(result.alphaPVal)}`,'done');
-    window.LAST_PORT={weights,model,result,annF,factors:Xm2[model],bench,freq};
-    renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchRets,annF,!ffData,freq,bench);
+    window.LAST_PORT={weights,model,result,annF,factors:Xm2[model],bench,freq,bBeta};
+    renderPortResults(weights,model,result,pA,mktRaw,st,benchSt,benchRets,annF,!ffData,freq,bench);
   }catch(e){setS('p','Error: '+e.message,'error');document.getElementById('p-output').innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Error</div><p style="font-family:inherit;font-size:12px;color:var(--red)">${e.message}</p></div>`;}
   document.getElementById('p-runBtn').disabled=false;
 }
@@ -15343,8 +15361,9 @@ async function runPortfolio(){
 function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchRets,annF,proxy,freq,bench){
   const aa=result.alpha*annF,fn=FN[model],fs=FS[model];
   const mL=Math.min(rawRets.length,benchRets.length);
-  const te=Math.sqrt(rawRets.slice(0,mL).reduce((s,r,i)=>s+(r-benchRets[i])**2,0)/(mL-1))*Math.sqrt(annF);
-  const ir=(st.annMean-benchSt.annMean)/te;
+  const act=rawRets.slice(0,mL).map((r,i)=>r-benchRets[i]),am=act.reduce((a,b)=>a+b,0)/mL;
+  const te=Math.sqrt(act.reduce((s,a)=>s+(a-am)**2,0)/(mL-1))*Math.sqrt(annF);
+  const ir=te>0?(am*annF)/te:0;
   document.getElementById('p-output').innerHTML=`
     ${proxy?`<div class="warn">⚠ French factors unavailable — SPY proxy used.</div>`:''}
     ${window.LAST_PORT&&!proxy?portInsightsHTML(window.LAST_PORT):''}
@@ -15360,7 +15379,7 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
         <div class="sr"><span class="sl">Ann. Volatility</span><span class="sv">${pct(st.annStd)}</span></div>
         <div class="sr"><span class="sl">Sharpe Ratio</span><span class="sv ${st.sharpe>1?'pos':st.sharpe<0?'neg':''}">${st.sharpe.toFixed(3)}</span></div>
         <div class="sr"><span class="sl">Max Drawdown</span><span class="sv neg">${pct(st.maxDD)}</span></div>
-        <div class="sr"><span class="sl">VaR 5% (daily)</span><span class="sv neg">${pct(st.var95)}</span></div>
+        <div class="sr"><span class="sl">VaR 5% (${freq})</span><span class="sv neg">${pct(st.var95)}</span></div>
         <div class="sr"><span class="sl">CVaR 5%</span><span class="sv neg">${pct(st.cvar95)}</span></div>
         <div class="sr"><span class="sl">Skewness</span><span class="sv">${st.skew.toFixed(3)}</span></div>
         <div class="sr"><span class="sl">Exc. Kurtosis</span><span class="sv">${st.kurt.toFixed(3)}</span></div>
@@ -15398,7 +15417,7 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
   const b0=result.betas[0],mMin=Math.min(...mktRaw)*100,mMax=Math.max(...mktRaw)*100;
   new Chart(document.getElementById('p-scat').getContext('2d'),{type:'scatter',data:{datasets:[{label:'Portfolio',data:mktRaw.map((m,i)=>({x:+(m*100).toFixed(4),y:+(rawRets[i]*100).toFixed(4)})),backgroundColor:'rgba(29,68,51,0.15)',borderColor:'rgba(29,68,51,0.3)',pointRadius:2},{label:`β=${b0.toFixed(3)}`,data:[{x:mMin,y:result.alpha*100+b0*mMin},{x:mMax,y:result.alpha*100+b0*mMax}],type:'line',borderColor:'#111111',borderWidth:1.5,pointRadius:0,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Source Sans 3',sans-serif",size:10},boxWidth:12}}},scales:{x:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Source Sans 3',sans-serif",size:9}}},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Source Sans 3',sans-serif",size:9}}}}}});
   const winSz=Math.min(60,Math.floor(rawRets.length/4)),rollVol=[];for(let i=winSz;i<=rawRets.length;i++){const w2=rawRets.slice(i-winSz,i),m=w2.reduce((a,b)=>a+b,0)/winSz,v=w2.reduce((a,b)=>a+(b-m)**2,0)/(winSz-1);rollVol.push(+(Math.sqrt(v*annF)*100).toFixed(2));}
-  new Chart(document.getElementById('p-vol').getContext('2d'),{type:'line',data:{labels:rollVol.map((_,i)=>i),datasets:[{label:`${winSz}-day Rolling Vol`,data:rollVol,borderColor:'#111111',borderWidth:1.5,pointRadius:0,tension:0.2,fill:true,backgroundColor:'rgba(17,17,17,0.08)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Source Sans 3',sans-serif",size:10},boxWidth:12}}},scales:{x:{display:false},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Source Sans 3',sans-serif",size:9},callback:v=>v.toFixed(1)+'%'}}}}});
+  new Chart(document.getElementById('p-vol').getContext('2d'),{type:'line',data:{labels:rollVol.map((_,i)=>i),datasets:[{label:`${winSz}-${freq==='monthly'?'month':'day'} rolling vol (annualized)`,data:rollVol,borderColor:'#111111',borderWidth:1.5,pointRadius:0,tension:0.2,fill:true,backgroundColor:'rgba(17,17,17,0.08)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Source Sans 3',sans-serif",size:10},boxWidth:12}}},scales:{x:{display:false},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Source Sans 3',sans-serif",size:9},callback:v=>v.toFixed(1)+'%'}}}}});
   let pk=1,nv=1;const dd=[];rawRets.forEach(r=>{nv*=(1+r);if(nv>pk)pk=nv;dd.push(+((nv-pk)/pk*100).toFixed(3));});
   new Chart(document.getElementById('p-dd').getContext('2d'),{type:'line',data:{labels:dd.map((_,i)=>i),datasets:[{label:'Drawdown',data:dd,borderColor:'#a12a2a',borderWidth:1.5,pointRadius:0,tension:0.2,fill:true,backgroundColor:'rgba(161,42,42,0.1)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Source Sans 3',sans-serif",size:10},boxWidth:12}}},scales:{x:{display:false},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Source Sans 3',sans-serif",size:9},callback:v=>v.toFixed(1)+'%'}}}}});
   initDist('p',rawRets,result.resid,freq);

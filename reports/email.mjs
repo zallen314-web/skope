@@ -22,7 +22,8 @@ export function buildEmail(m, { siteUrl, unsubscribeUrl, ffThrough }) {
   const dateTxt = new Date(m.asOf + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const head = m.label.words.charAt(0).toUpperCase() + m.label.words.slice(1);
   const alphaTxt = m.alphaP < 0.05 ? (m.alphaAnn > 0 ? `positive alpha (${pc(m.alphaAnn)}/yr)` : `negative alpha (${pc(m.alphaAnn)}/yr)`) : 'no reliable alpha';
-  const beta = m.exposures[0].beta;
+  const B = m.benchBeta, f1 = v => Math.abs(v).toFixed(1);
+  const riskTxt = B ? `Beta vs ${esc(m.benchmark)} <b>${B.beta.toFixed(2)}</b> (95% range ${(B.beta - 1.96 * B.se).toFixed(2)} to ${(B.beta + 1.96 * B.se).toFixed(2)}). On average, a 10% fall in ${esc(m.benchmark)} has gone with a <b>${f1((B.beta - 1.96 * B.se) * 10)}% to ${f1((B.beta + 1.96 * B.se) * 10)}%</b> fall in your portfolio. Single episodes can differ: ${esc(m.benchmark)} explains ${(B.r2 * 100).toFixed(0)}% of its monthly moves.` : '';
   const openUrl = `${siteUrl}?p=${encodeURIComponent(m.holdingsKey)}&b=${m.benchmark}`;
 
   const changes = m.changes.first
@@ -66,7 +67,7 @@ export function buildEmail(m, { siteUrl, unsubscribeUrl, ffThrough }) {
     <p style="margin:8px 0 0;font:400 11px ${SANS};color:${MUT}">Bold = statistically significant at 5%. Large differences from ${esc(m.benchmark)} are what make your returns behave differently from the index.</p>`)}
   ${section('Where your returns came from', `<table width="100%" cellpadding="0" cellspacing="0">${attrRows}</table>
     <p style="margin:8px 0 0;font:400 11px ${SANS};color:${MUT}">Annualized contribution to your return above cash: each factor's beta times that factor's average return over the period. Factors explain ${(m.r2 * 100).toFixed(0)}% of your monthly return variation.</p>`)}
-  ${section('Risk', `<p style="margin:0 0 8px;font:400 14px/1.6 ${SANS};color:${INK}">If the market falls 10%, your factor beta of <b>${beta.toFixed(2)}</b> implies roughly a <b>${(beta * 10).toFixed(1)}%</b> drop.</p>
+  ${section('Risk', `<p style="margin:0 0 8px;font:400 14px/1.6 ${SANS};color:${INK}">${riskTxt}</p>
     <p style="margin:0;font:400 14px/1.6 ${SANS};color:${INK}">Volatility <b>${pcu(m.vol)}</b>/yr &nbsp;·&nbsp; Worst drawdown <b>${pcu(m.maxDD)}</b> &nbsp;·&nbsp; Tracking error vs ${esc(m.benchmark)} <b>${pcu(m.trackingError)}</b> &nbsp;·&nbsp; Return <b>${pc(m.annReturn)}</b>/yr vs ${esc(m.benchmark)} <b>${pc(m.benchAnnReturn)}</b>/yr</p>`)}
   ${section('Concentration', conc)}
   ${section('Holdings', `<table width="100%" cellpadding="0" cellspacing="0"><tr>${th('Ticker')}${th('Weight', 1)}${th('This ' + per, 1)}${th('Beta', 1)}${th('Main tilt', 1)}</tr>${hRows}</table>`)}

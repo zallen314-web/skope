@@ -112,6 +112,9 @@ export function analyze({ holdings, daily, bench, ff, mom, frequency = 'weekly',
   const X = FACTORS.map(f => F[f]);
   const reg = ols(rp.map((r, i) => r - rf[i]), X);
   const regB = ols(rb.map((r, i) => r - rf[i]), X);
+  // single-index beta vs the benchmark: total sensitivity to a benchmark move (other factors free to move with it)
+  const capm = ols(rp.map((r, i) => r - rf[i]), [rb.map((r, i) => r - rf[i])]);
+  const benchBeta = { beta: capm.betas[0], se: capm.se[0], r2: capm.r2 };
   const n = months.length;
   const ann = a => Math.pow(a.reduce((s, r) => s * (1 + r), 1), 12 / a.length) - 1;
   let peak = 1, v = 1, mdd = 0; for (const r of rp) { v *= 1 + r; peak = Math.max(peak, v); mdd = Math.min(mdd, v / peak - 1); }
@@ -134,7 +137,9 @@ export function analyze({ holdings, daily, bench, ff, mom, frequency = 'weekly',
     .filter(g => g.tickers.length >= 2 && g.weight >= 0.35).sort((a, b) => b.weight - a.weight);
   // this period
   const nd = frequency === 'monthly' ? 21 : 5;
-  const pPer = W.reduce((s, h) => { const r = periodReturn(daily[h.ticker], nd); return r == null ? s : s + h.w * r; }, 0);
+  // weights re-scaled over holdings that have a return this period
+  let pw = 0, pr = 0; for (const h of W) { const r = periodReturn(daily[h.ticker], nd); if (r != null) { pw += h.w; pr += h.w * r; } }
+  const pPer = pw > 0 ? pr / pw : null;
   const bPer = periodReturn(bench.daily, nd);
   const exposures = FACTORS.map((f, i) => ({ factor: f, beta: reg.betas[i], t: reg.t[i], sig: Math.abs(reg.t[i]) >= 1.96, bench: regB.betas[i], active: reg.betas[i] - regB.betas[i] }));
   const label = styleLabel(reg);
@@ -143,7 +148,7 @@ export function analyze({ holdings, daily, bench, ff, mom, frequency = 'weekly',
     benchmark: bench.ticker, frequency,
     period: { days: nd, port: pPer, bench: bPer },
     annReturn: ann(rp), benchAnnReturn: ann(rb), vol: sd(rp) * Math.sqrt(12), maxDD: mdd,
-    trackingError: te, infoRatio: te > 0 ? (mean(active) * 12) / te : null,
+    benchBeta, trackingError: te, infoRatio: te > 0 ? (mean(active) * 12) / te : null,
     alphaAnn: reg.alpha * 12, alphaT: reg.alphaT, alphaP: reg.alphaP, r2: reg.r2,
     exposures, attribution, label,
     concentration: { largest: ws[0], top3: ws.slice(0, 3).reduce((s, x) => s + x, 0), effN, count: W.length },
