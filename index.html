@@ -100,6 +100,12 @@ body{background:var(--bg);color:var(--text);font-family:'Source Sans 3',-apple-s
 .fund-value.rich{color:var(--text);}
 .fund-value.neutral{color:var(--text2);}
 .fund-sub{font-size:10.5px;color:var(--text3);line-height:1.4;}
+.rk-tbl{width:100%;border-collapse:collapse;font-size:13px;}.rk-tbl th{text-align:left;font-weight:600;color:var(--text3);font-size:11.5px;padding:6px 8px;border-bottom:1px solid var(--border);}
+.rk-tbl td{padding:8px;border-bottom:1px solid var(--border2);vertical-align:top;font-variant-numeric:tabular-nums;}.rk-tbl .sub{display:block;font-size:11px;color:var(--text3);}
+.rk-bar{height:5px;background:#f1f3f2;border-radius:3px;margin:3px 0;overflow:hidden;}.rk-bar span{display:block;height:100%;border-radius:3px;}
+.rk-note{font-size:11.5px;color:var(--text3);margin-top:10px;line-height:1.5;}.rk-head{font-family:'Source Serif 4',Georgia,serif;font-size:22px;margin:26px 0 12px;}
+.rk-mac{display:grid;grid-template-columns:150px 80px 1fr;gap:12px;align-items:baseline;padding:10px 0;border-top:1px solid var(--border2);font-size:13.5px;}
+.rk-mac-h{font-weight:600;}.rk-mac-v{font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-variant-numeric:tabular-nums;}.rk-mac-v.sig{font-weight:700;}.rk-mac-t{color:var(--text2);}.rk-mac-t .sub{color:var(--text3);}
 .fl-title{font-family:'Source Serif 4',Georgia,serif;font-size:19px;line-height:1.3;margin:2px 0 12px;}
 .fl-h{font-family:'Source Serif 4',Georgia,serif;font-size:14px;font-weight:600;color:var(--text2);margin:14px 0 6px;}
 .fl-list{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:var(--text);}.fl-list li{margin-bottom:4px;}
@@ -396,7 +402,7 @@ canvas{width:100%!important;display:block;}
       </div>
       <div class="status-bar"><div class="sdot" id="s-dot"></div><span id="s-status">Enter a ticker and click Run</span></div>
       <div id="s-tickerBar" style="display:none"></div>
-      <div id="s-subtabs" class="subtabs" style="display:none"><button id="st-summary" class="stab on" onclick="setSubTab('summary')">Summary</button><button id="st-factors" class="stab" onclick="setSubTab('factors')">Factor exposures</button><button id="st-returns" class="stab" onclick="setSubTab('returns')">Return distribution</button><button id="st-valuation" class="stab" onclick="setSubTab('valuation')">Valuation</button></div>
+      <div id="s-subtabs" class="subtabs" style="display:none"><button id="st-summary" class="stab on" onclick="setSubTab('summary')">Summary</button><button id="st-factors" class="stab" onclick="setSubTab('factors')">Factor exposures</button><button id="st-returns" class="stab" onclick="setSubTab('returns')">Return distribution</button><button id="st-risk" class="stab" onclick="setSubTab('risk')">Risk</button><button id="st-valuation" class="stab" onclick="setSubTab('valuation')">Valuation</button></div>
       <div id="s-valpage" style="display:none"><div id="s-fundamentals" style="display:none"></div><div id="s-val-empty" class="empty" style="display:none">Valuation data isn't available for this ticker.</div></div>
       <div id="s-output"><div class="empty">Enter ticker and run<br><div class="small">Get free API key at twelvedata.com/register</div></div></div>
     </div>
@@ -14962,6 +14968,116 @@ function riskSentence(P){
   const lo=B.b-1.96*B.se,hi=B.b+1.96*B.se;
   return`Beta vs ${bn} <b>${B.b.toFixed(2)}</b> (95% range ${lo.toFixed(2)} to ${hi.toFixed(2)}). On average, a 10% fall in ${bn} has gone with a <b>${f1(lo*10)}% to ${f1(hi*10)}%</b> fall here. Single episodes can differ: ${bn} explains ${(B.r2*100).toFixed(0)}% of this portfolio's moves.`;
 }
+// ── Risk analysis: rolling exposures, stress tests, macro sensitivities, risk contribution ──
+// Everything here uses monthly returns and the Fama-French five factors plus momentum, so every stock
+// and portfolio gets the same view regardless of the frequency/model chosen for the main regression.
+const RK_F=['Market','Size','Value','Profitability','Investment','Momentum'];
+const RK_COL={Market:'#1d4433',Size:'#4a78b5',Value:'#c8902e',Momentum:'#a8483a',Profitability:'#7fa98a',Investment:'#6e4f8a'};
+const RK_SCEN=[
+  ['Dot-com bust','200004','200209','Tech stocks collapsed over two and a half years.'],
+  ['Global financial crisis','200711','200902','Housing and banking crisis.'],
+  ['2011 debt-ceiling selloff','201105','201109','US credit downgrade and euro-zone stress.'],
+  ['Q4 2018 selloff','201810','201812','Rate-hike and trade-war fears.'],
+  ['COVID crash','202002','202003','Pandemic shutdowns.'],
+  ['2022 rate shock','202201','202209','Fastest Fed hikes in four decades.'],
+];
+async function loadMacro(){if(CACHE.macro!==undefined)return CACHE.macro;
+  try{const r=await fetch('data/macro.json',{cache:'no-cache'});CACHE.macro=r.ok?await r.json():null;}catch(e){CACHE.macro=null;}return CACHE.macro;}
+// monthly returns [{date:'YYYYMM',ret}] -> rows with excess return and the six factors
+function rkRows(monthly){const ff=fetchFF('ff5m',FF_FIELDS.ff5m),mo=fetchFF('momm',FF_FIELDS.momm),out=[];if(!ff||!mo)return out;
+  for(const{date,ret}of monthly){const f=ff[date],m=mo[date];if(!f||!m||!isFinite(ret))continue;out.push({ym:date,ret,rf:f.rf,y:ret-f.rf,X:[f.mkt_rf,f.smb,f.hml,f.rmw,f.cma,m.mom]});}return out;}
+const rkCols=(rows,k)=>Array.from({length:k},(_,j)=>rows.map(r=>r.X[j]));
+const ymLabel=ym=>new Date(+ym.slice(0,4),+ym.slice(4)-1,15).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+const sgnPct=(v,d=1)=>v==null||!isFinite(v)?'—':`${v>=0?'+':'−'}${Math.abs(v*100).toFixed(d)}%`;
+
+function rkStress(rows,betas){const ff=fetchFF('ff5m',FF_FIELDS.ff5m),mo=fetchFF('momm',FF_FIELDS.momm),act={};rows.forEach(r=>act[r.ym]=r.ret);
+  return RK_SCEN.map(([name,a,b,why])=>{const ms=Object.keys(ff).filter(k=>k>=a&&k<=b&&mo[k]).sort();
+    let est=1,mkt=1,actual=1,haveAll=true;
+    for(const k of ms){const f=ff[k],x=[f.mkt_rf,f.smb,f.hml,f.rmw,f.cma,mo[k].mom];est*=1+f.rf+x.reduce((s,v,j)=>s+v*betas[j],0);mkt*=1+f.rf+f.mkt_rf;
+      if(act[k]==null)haveAll=false;else actual*=1+act[k];}
+    return{name,why,from:a,to:b,est:est-1,mkt:mkt-1,actual:haveAll&&ms.length?actual-1:null};});}
+
+function rkRolling(rows,win=36){const out=[];for(let i=win;i<=rows.length;i++){const s=rows.slice(i-win,i);
+  try{const r=ols(s.map(x=>x.y),rkCols(s,6));out.push({ym:s[s.length-1].ym,b:r.betas});}catch(e){}}return out;}
+
+function rkMacro(rows,macro){if(!macro)return null;const S=macro.series,use=rows.filter(r=>S[r.ym]&&S[r.ym].every(v=>v!=null));
+  if(use.length<36)return{n:use.length,few:true};
+  const r=ols(use.map(x=>x.y),[use.map(x=>x.X[0]),...[0,1,2,3].map(j=>use.map(x=>S[x.ym][j]))]);
+  return{n:use.length,from:use[0].ym,to:use[use.length-1].ym,b:r.betas.slice(1),t:r.tStats.slice(1)};}
+
+function rkContribution(weights,series){// series: ticker -> [{date,ret}] at one frequency
+  const sets=weights.map(w=>new Set(series[w.ticker].map(r=>r.date))),dates=[...sets[0]].filter(d=>sets.every(s=>s.has(d))).sort();
+  if(dates.length<20)return null;
+  const R=weights.map(w=>{const m={};series[w.ticker].forEach(r=>m[r.date]=r.ret);return dates.map(d=>m[d]);});
+  const n=dates.length,k=weights.length,mu=R.map(a=>a.reduce((s,v)=>s+v,0)/n);
+  const C=R.map((a,i)=>R.map((b,j)=>a.reduce((s,v,t)=>s+(v-mu[i])*(b[t]-mu[j]),0)/(n-1)));
+  const w=weights.map(x=>x.w),Cw=C.map(row=>row.reduce((s,v,j)=>s+v*w[j],0)),vp=w.reduce((s,v,i)=>s+v*Cw[i],0),sp=Math.sqrt(vp);
+  return{n,sp,rows:weights.map((x,i)=>({ticker:x.ticker,w:x.w,share:w[i]*Cw[i]/vp,vol:Math.sqrt(C[i][i]),corr:Cw[i]/(Math.sqrt(C[i][i])*sp)})).sort((a,b)=>b.share-a.share),
+    dr:w.reduce((s,v,i)=>s+v*Math.sqrt(C[i][i]),0)/sp};}
+
+const MACRO_TXT=[
+  ['Interest rates','a 1-point rise in the 10-year Treasury yield',1],
+  ['Oil','a 10% rise in oil prices',0.10],
+  ['US dollar','a 10% rise in the dollar',0.10],
+  ['Credit spreads','a 1-point widening in corporate credit spreads',1],
+];
+function riskPanelHTML(id,rows,{label,contrib=null,annF=12,macro}){
+  if(rows.length<24)return `<div class="card"><div class="card-title">Risk analysis</div><div style="font-size:13.5px;color:var(--text2)">Needs at least two years of monthly history. Choose a 3-, 5- or 10-year period.</div></div>`;
+  const full=ols(rows.map(r=>r.y),rkCols(rows,6)),st=rkStress(rows,full.betas),roll=rkRolling(rows),mac=rkMacro(rows,macro);
+  let h='';
+  if(contrib){const c=contrib;
+    h+=`<div class="card"><div class="card-title">Risk contribution by holding</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:10px">Share of the portfolio's total volatility (${pct(c.sp*Math.sqrt(annF),1)} a year) that comes from each holding, after accounting for how they move together.</div>
+      <table class="rk-tbl"><thead><tr><th>Holding</th><th>Weight</th><th>Share of risk</th><th></th><th>Own volatility</th><th>Correlation with portfolio</th></tr></thead><tbody>
+      ${c.rows.map(r=>`<tr><td><b>${escH(r.ticker)}</b></td><td>${(r.w*100).toFixed(1)}%</td><td><b>${(r.share*100).toFixed(1)}%</b></td>
+        <td style="width:28%"><div class="rk-bar"><span style="width:${Math.max(0,Math.min(100,r.w*100))}%;background:#c9d1cb"></span></div><div class="rk-bar"><span style="width:${Math.max(0,Math.min(100,r.share*100))}%;background:var(--accent)"></span></div></td>
+        <td>${pct(r.vol*Math.sqrt(annF),1)}</td><td>${r.corr.toFixed(2)}</td></tr>`).join('')}</tbody></table>
+      <div class="rk-note">Grey bar: weight. Green bar: share of risk. Diversification ratio ${c.dr.toFixed(2)} (weighted average of holdings' volatility ÷ portfolio volatility; higher means more diversification).</div></div>`;}
+  h+=`<div class="card"><div class="card-title">How exposures have shifted · rolling 36 months</div>
+    ${roll.length>=6?`<canvas id="${id}-roll" height="210"></canvas><div class="rk-note">Each point is a regression over the 36 months ending that month. Market near 1 moves with the market; positive Size leans small-cap, positive Value leans value, positive Momentum leans recent winners.</div>`
+      :`<div style="font-size:13.5px;color:var(--text2)">Needs at least about 4 years of history. Choose a 5- or 10-year period to see how exposures have changed.</div>`}</div>`;
+  h+=`<div class="card"><div class="card-title">Stress tests · past crises replayed</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:10px">Estimated return if ${escH(label)} had today's factor exposures during each episode, from the factors' actual returns at the time.</div>
+    <table class="rk-tbl"><thead><tr><th>Episode</th><th>Period</th><th>Market</th><th>Estimated</th><th>Actual</th></tr></thead><tbody>
+    ${st.map(s=>`<tr><td><b>${s.name}</b><span class="sub">${s.why}</span></td><td>${ymLabel(s.from)} – ${ymLabel(s.to)}</td><td>${sgnPct(s.mkt)}</td><td><b class="${s.est<0?'neg':'pos'}">${sgnPct(s.est)}</b></td><td>${s.actual==null?'<span class="sub">before data</span>':sgnPct(s.actual)}</td></tr>`).join('')}
+    </tbody></table><div class="rk-note">Exposures from monthly returns over the selected period (Fama-French five factors plus momentum). Estimates leave out stock-specific moves, so actual results can differ a lot, as the Actual column shows where the data covers the episode.</div></div>`;
+  if(!mac)h+=`<div class="card"><div class="card-title">Macro sensitivities</div><div style="font-size:13.5px;color:var(--text2)">Macro data isn't available right now.</div></div>`;
+  else if(mac.few)h+=`<div class="card"><div class="card-title">Macro sensitivities</div><div style="font-size:13.5px;color:var(--text2)">Needs at least three years of monthly history. Choose a 5- or 10-year period.</div></div>`;
+  else h+=`<div class="card"><div class="card-title">Macro sensitivities · beyond the market</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:10px">How ${escH(label)} has moved with each macro factor in the same month, after accounting for the market's own move. Monthly, ${ymLabel(mac.from)} – ${ymLabel(mac.to)} (${mac.n} months). Bold means statistically significant (|t| ≥ 2).</div>
+    ${MACRO_TXT.map(([nm,desc,sz],j)=>{const v=mac.b[j]*sz,t=mac.t[j],sig=Math.abs(t)>=2;
+      return`<div class="rk-mac"><div class="rk-mac-h">${nm}</div><div class="rk-mac-v ${sig?'sig':''}">${sgnPct(v)}</div><div class="rk-mac-t">With ${desc}, ${escH(label)} has moved ${sgnPct(v)} beyond what the market explains <span class="sub">(t = ${t.toFixed(1)})</span>.</div></div>`;}).join('')}
+    <div class="rk-note">Source: FRED, Federal Reserve Bank of St. Louis (10-year Treasury yield, WTI crude, broad trade-weighted dollar, Baa–Treasury spread).</div></div>`;
+  return{html:h,roll};
+}
+function drawRolling(id,roll){const el=document.getElementById(id+'-roll');if(!el||!roll.length)return;
+  const show=[0,1,2,5];
+  new Chart(el,{type:'line',data:{labels:roll.map(r=>ymLabel(r.ym)),datasets:show.map(j=>({label:RK_F[j],data:roll.map(r=>+r.b[j].toFixed(3)),borderColor:RK_COL[RK_F[j]],backgroundColor:RK_COL[RK_F[j]],borderWidth:2,pointRadius:0,tension:.25}))},
+    options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{boxWidth:12,font:{family:"'Source Sans 3',sans-serif",size:11}}}},
+      scales:{x:{ticks:{maxTicksLimit:8,font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10}},grid:{color:'#eef1ef'}}}}});}
+
+// Individual stock: Risk tab
+async function renderSingleRisk(ticker,monthly){
+  const el=document.getElementById('sp-risk');if(!el)return;
+  const macro=await loadMacro(),rows=rkRows(monthly);
+  const r=riskPanelHTML('sr',rows,{label:ticker,macro});
+  if(typeof r==='string'){el.innerHTML=r;return;}
+  el.innerHTML=r.html;if(SUBTAB==='risk')drawRolling('sr',r.roll);else el.dataset.pending='1';window.LAST_RISK={ticker,roll:r.roll};
+}
+// Portfolio: risk section under the results
+async function renderPortRisk(weights,outputsize,freq,label){
+  const el=document.getElementById('p-risk');if(!el)return;
+  el.innerHTML='<div class="card"><div class="card-title">Risk analysis</div><div style="font-size:13px;color:var(--text3)">Calculating…</div></div>';
+  const isD=freq==='daily',annF=isD?252:12,ser={},mon={};
+  for(const w of weights){const d=await fetchTwelvedata(w.ticker,outputsize);ser[w.ticker]=isD?d.daily:d.monthly;mon[w.ticker]=d.monthly;}
+  const sets=weights.map(w=>new Set(mon[w.ticker].map(r=>r.date))),ms=[...sets[0]].filter(d=>sets.every(s=>s.has(d))).sort();
+  const mm=weights.map(w=>{const m={};mon[w.ticker].forEach(r=>m[r.date]=r.ret);return m;});
+  const monthly=ms.map(d=>({date:d,ret:weights.reduce((s,w,i)=>s+w.w*mm[i][d],0)}));
+  const macro=await loadMacro(),rows=rkRows(monthly);
+  const r=riskPanelHTML('pr',rows,{label:'this portfolio',contrib:weights.length>1?rkContribution(weights,ser):null,annF,macro});
+  el.innerHTML=`<div class="rk-head">Risk analysis</div>`+(typeof r==='string'?r:r.html);if(typeof r!=='string')drawRolling('pr',r.roll);
+}
+
 function portInsightsHTML(P){
   const {weights,model,result:r,annF,factors,bench}=P,fn=FN[model],mn=a=>a.reduce((s,x)=>s+x,0)/a.length;
   const fm=v=>`${v>=0?'+':'−'}${Math.abs(v*100).toFixed(1)}%`;
@@ -15281,11 +15397,12 @@ function downloadReport(){
 let SUBTAB='summary';
 function setSubTab(name){
   SUBTAB=name;
-  ['summary','factors','returns','valuation'].forEach(n=>{const b=document.getElementById('st-'+n);if(b)b.classList.toggle('on',n===name);});
+  ['summary','factors','returns','risk','valuation'].forEach(n=>{const b=document.getElementById('st-'+n);if(b)b.classList.toggle('on',n===name);});
   const sm=document.getElementById('sp-summary');if(sm)sm.style.display=name==='summary'?'block':'none';
   const f=document.getElementById('sp-factors'),r=document.getElementById('sp-returns'),v=document.getElementById('s-valpage');
   if(f)f.style.display=name==='factors'?'block':'none';
   if(r)r.style.display=name==='returns'?'block':'none';
+  const rk=document.getElementById('sp-risk');if(rk){rk.style.display=name==='risk'?'block':'none';if(name==='risk'&&rk.dataset.pending&&window.LAST_RISK){delete rk.dataset.pending;drawRolling('sr',window.LAST_RISK.roll);}}
   if(v){v.style.display=name==='valuation'?'block':'none';
     const fu=document.getElementById('s-fundamentals'),em=document.getElementById('s-val-empty');
     if(em)em.style.display=(name==='valuation'&&fu.style.display==='none')?'block':'none';}
@@ -15532,6 +15649,7 @@ async function runSingle(){
     renderFundamentals(ticker,fund);
     setS('s',`${info.name||ticker} · R²=${(result.r2*100).toFixed(1)}% · α=${pct(result.alpha*annF)}${stars(result.alphaPVal)}`,'done');
     renderSingle(ticker,model,result,rawRets,mktRaw,st,annF,!ffData,freq);
+    renderSingleRisk(ticker,stockData.monthly).catch(e=>console.warn('risk',e));
     hlP.then(h=>{if(curInfo&&curInfo.ticker!==ticker)return;window.LAST_HL=h;const el=document.getElementById('sp-filings');if(el)el.innerHTML=filingsHTML(h);});
   }catch(e){
     setS('s','Error: '+e.message,'error');
@@ -15583,6 +15701,7 @@ function renderSingle(ticker,model,result,rawRets,mktRaw,st,annF,proxy,freq){
       <tbody>${fn.map((n,i)=>{const lo=result.betas[i]-1.96*result.se[i],hi=result.betas[i]+1.96*result.se[i],st2=fs[i]==='aqr'?`<span class="stag saqr">AQR</span>`:`<span class="stag sff">French</span>`;return`<tr><td>${n}</td><td>${st2}</td><td class="${cc(result.betas[i])}" style="font-weight:${result.pValues[i]<0.05?700:400}">${result.betas[i].toFixed(4)}</td><td>${result.se[i].toFixed(4)}</td><td>${result.tStats[i].toFixed(3)}</td><td>${result.pValues[i]<0.0001?'<0.0001':result.pValues[i].toFixed(4)}</td><td class="sig">${stars(result.pValues[i])}</td><td>[${lo.toFixed(3)}, ${hi.toFixed(3)}]</td></tr>`;}).join('')}</tbody></table>
     </div>
     </div>
+    <div id="sp-risk" style="display:none"><div class="card"><div class="card-title">Risk analysis</div><div style="font-size:13px;color:var(--text3)">Calculating…</div></div></div>
     <div id="sp-returns">
       <div class="two-col">
       <div class="card" style="margin-bottom:0"><div class="card-title">Return Stats · ${ticker} · ${freq}</div>
@@ -15658,6 +15777,7 @@ async function runPortfolio(){
     setS('p',`Portfolio · R²=${(result.r2*100).toFixed(1)}% · α=${pct(result.alpha*annF)}${stars(result.alphaPVal)}`,'done');
     window.LAST_PORT={weights,model,result,annF,factors:Xm2[model],bench,freq,bBeta};
     renderPortResults(weights,model,result,pA,mktRaw,st,benchSt,benchRets,annF,!ffData,freq,bench);
+    document.getElementById('p-output').insertAdjacentHTML('beforeend','<div id="p-risk"></div>');renderPortRisk(weights,outputsize,freq).catch(e=>console.warn('risk',e));
   }catch(e){setS('p','Error: '+e.message,'error');document.getElementById('p-output').innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Error</div><p style="font-family:inherit;font-size:12px;color:var(--red)">${e.message}</p></div>`;}
   document.getElementById('p-runBtn').disabled=false;
 }

@@ -1,4 +1,4 @@
-name: Refresh filing highlights
+name: Refresh filing highlights and macro data
 
 # Daily on weekdays: pull new earnings releases and 10-K risk factors from SEC filings into data/highlights/.
 on:
@@ -28,9 +28,11 @@ jobs:
           node-version: 22
       - name: Fetch highlights from SEC filings
         run: node --experimental-strip-types reports/update-highlights.mjs ${{ github.event.inputs.only && format('--only={0}', github.event.inputs.only) || '' }}
+      - name: Refresh macro series (FRED)
+        run: node reports/update-macro.mjs || echo 'FRED unavailable, keeping last macro file'
       - name: Commit changes
         run: |
-          git add data/highlights
+          git add data/highlights data/macro.json
           if git diff --cached --quiet; then echo "No changes."; exit 0; fi
           git config user.name "skope-bot"
           git config user.email "skope-bot@users.noreply.github.com"
