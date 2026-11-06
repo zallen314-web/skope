@@ -58,7 +58,7 @@ export async function filingHighlights(tickers, since) {
 
 // Finnhub company news (free key): headline, source and link only
 export async function addNews(highlights, since, today) {
-  const key = process.env.FINNHUB_API_KEY;
+  const key = (process.env.FINNHUB_API_KEY || '').trim();
   if (!key) return false;
   for (const h of highlights) {
     try {
