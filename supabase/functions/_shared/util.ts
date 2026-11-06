@@ -41,12 +41,12 @@ export async function sendEmail(to: string, subject: string, html: string) {
   }
 }
 
-const G = '#1d4433', SERIF = "'Source Serif 4',Georgia,'Times New Roman',serif", SANS = "-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
+const G = '#1d4433', SERIF = "'Source Serif 4',Georgia,'Times New Roman',serif", SANS = "Inter,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
 export const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as Record<string, string>)[c]);
 
 // simple branded page for confirm / unsubscribe
 export function page(title: string, body: string) {
-  return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · Skope</title><link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet"></head>
+  return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · Skope</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet"></head>
 <body style="margin:0;background:#f4f5f3;font-family:${SANS};color:#111">
 <div style="background:${G};padding:22px 28px"><a href="${SITE}" style="font:600 26px ${SERIF};color:#fff;text-decoration:none">Skope</a></div>
 <div style="max-width:560px;margin:48px auto;padding:0 24px"><h1 style="font:400 28px ${SERIF};margin:0 0 14px">${esc(title)}</h1>
@@ -55,7 +55,7 @@ export function page(title: string, body: string) {
 
 // branded transactional email shell
 export function emailShell(inner: string) {
-  return `<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet"></head><body style="margin:0;background:#f4f5f3"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0"><tr><td align="center">
+  return `<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet"></head><body style="margin:0;background:#f4f5f3"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0"><tr><td align="center">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:#fff">
 <tr><td style="background:${G};padding:20px 28px;font:600 24px ${SERIF};color:#fff">Skope<img src="https://skoperesearch.com/logo.png" width="28" height="26" alt="" style="display:inline-block;vertical-align:-3px;margin-left:10px;border:0;height:26px;width:28px"></td></tr>
 <tr><td style="padding:26px 28px;font:400 15px/1.6 ${SANS};color:#111">${inner}</td></tr>
