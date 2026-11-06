@@ -34,7 +34,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: steps.commit.outputs.changed == 'true'
         with:
-          version: latest
+          version: 2.58.5
       - name: Redeploy functions
         if: steps.commit.outputs.changed == 'true' && env.SUPABASE_ACCESS_TOKEN != ''
         run: supabase functions deploy --project-ref zgsenoktxhovmwpwiesi --no-verify-jwt --yes
