@@ -92,6 +92,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,'S
 .sv{font-family:inherit;font-size:13px;font-weight:500;}
 .pos{color:var(--green);}.neg{color:var(--red);}.blue{color:var(--accent);}
 /* Factor table */
+.bmp-qi{margin-bottom:12px}.bmp-qt{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.4}
+.bmp-opts{display:flex;flex-wrap:wrap;gap:5px}.bmp-opt{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:5px 9px;font-family:inherit;font-size:11.5px;color:var(--text2);cursor:pointer}
+.bmp-opt:hover{border-color:var(--accent);color:var(--accent)}.bmp-opt.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.bmp-prof{border-top:1px solid var(--border2);padding-top:10px;margin-top:4px;font-size:13px}.bmp-r{font-size:11px;color:var(--text3);margin-left:4px}
+.bmp-ps{font-size:12px;color:var(--text2);line-height:1.55;margin-top:3px}.bmp-fine{font-size:11px;color:var(--text3);line-height:1.5;margin-top:8px}
+.bmp-chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);cursor:pointer}
+.bmp-hrow{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.bmp-big{font-size:22px;color:var(--accent);margin-bottom:2px}
+.bmp-acts{display:flex;gap:8px}.bmp-how p{font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:8px}
 .ftbl{width:100%;border-collapse:collapse;}
 .ftbl th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:var(--text3);border-bottom:2px solid var(--border);background:var(--surface2);}
 .ftbl td{padding:7px 10px;border-bottom:1px solid var(--border2);font-family:inherit;font-size:12px;}
@@ -522,7 +530,7 @@ canvas{width:100%!important;display:block;}
 
 <div class="tabs">
   <div class="tab active" id="tab-single"   onclick="switchTab('single')">Individual</div>
-  <div class="tab"        id="tab-portfolio" onclick="switchTab('portfolio')">Portfolio</div>
+  <div class="tab"        id="tab-portfolio" onclick="switchTab('portfolio')">Build my portfolio</div>
   <div class="tab"        id="tab-compare"  onclick="switchTab('compare')">Compare</div>
 </div>
 
@@ -571,7 +579,7 @@ canvas{width:100%!important;display:block;}
   <div class="port-layout">
     <div>
       <div class="port-panel">
-        <div class="port-hdr"><div class="port-title">Portfolio Builder</div><div class="port-sub">Weights must sum to 100%</div></div>
+        <div class="port-hdr"><div class="port-title">Step 1 · What you'd hold</div><div class="port-sub">Stocks and ETFs to consider. Current weights are optional.</div></div>
         <div class="pf-row"><select id="pf-select" onchange="pfSelectChanged(this.value)"><option value="">Saved portfolios…</option></select><button class="ghost-btn" onclick="saveNamedPortfolio()">Save</button><button class="ghost-btn pf-del" id="pf-del" style="display:none" onclick="deleteSavedPortfolio(document.getElementById('pf-select').value)">Delete</button></div>
         <div id="weight-rows"><div class="wl-empty">Add tickers below or from Coverage List</div></div>
         <div class="add-row">
@@ -580,7 +588,7 @@ canvas{width:100%!important;display:block;}
         </div>
         <div class="w-summary">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
-            <span style="font-size:11px;font-weight:700;color:var(--text2);">Total</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text2);">Current weights</span>
             <span id="w-total-val" style="font-family:inherit;font-size:14px;font-weight:700">0%</span>
           </div>
           <div class="w-bar-wrap"><div class="w-bar" id="w-bar" style="width:0%"></div></div>
@@ -590,16 +598,27 @@ canvas{width:100%!important;display:block;}
           </div>
         </div>
       </div>
-      <div class="card" style="margin-top:14px">
-        <div class="card-title">Settings</div>
+      <div class="card" style="margin-top:14px"><div class="card-title">Step 2 · About you</div>
+        <div id="bmp-q"></div><div id="bmp-score"></div>
+      </div>
+      <div class="card" style="margin-top:14px"><div class="card-title">Step 3 · Build</div>
+        <label class="bmp-chk"><input type="checkbox" id="bmp-sleeve" checked> Allow cash (BIL) and bonds (AGG)</label>
+        <div class="bmp-fine" style="margin:4px 0 12px">No more than 20% in any one stock or ETF.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div class="field"><label>History</label><select id="p-period" style="width:100%"><option value="1260" selected>5 Years</option><option value="2520">10 Years</option><option value="5000">Max (~20 Years)</option></select></div>
+          <div class="field"><label>Benchmark</label><select id="p-bench" style="width:100%"><option value="SPY">S&P 500 (SPY)</option><option value="QQQ">Nasdaq (QQQ)</option><option value="IWM">Russell 2000 (IWM)</option></select></div>
+        </div>
+        <button class="run-btn" id="bmp-btn" onclick="runBuild()" style="width:100%">Build my portfolio</button>
+        <div class="status-bar" style="margin-top:10px;margin-bottom:0"><div class="sdot" id="bmp-dot"></div><span id="bmp-status">Add holdings, answer the questions, then build</span></div>
+      </div>
+      <div class="card" style="margin-top:14px"><div class="card-title">Analyze a portfolio</div>
+        <p class="bmp-fine" style="margin-bottom:10px">Full performance, factor, risk and scenario analysis of the weights in Step 1.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div class="field"><label>Model</label><select id="p-model" style="width:100%"><option value="capm">CAPM</option><option value="ff3" selected>FF 3-Factor</option><option value="ff5">FF 5-Factor</option><option value="ff5mom">FF5+MOM</option><option value="qmj">FF5+QMJ</option><option value="kitchen">Kitchen Sink</option></select></div>
-          <div class="field"><label>Period</label><select id="p-period" style="width:100%"><option value="252">1 Year</option><option value="504">2 Years</option><option value="756">3 Years</option><option value="1260" selected>5 Years</option><option value="2520">10 Years</option><option value="5000">Max (~20 Years)</option></select></div>
-          <div class="field"><label>Benchmark</label><select id="p-bench" style="width:100%"><option value="SPY">S&P 500 (SPY)</option><option value="QQQ">Nasdaq (QQQ)</option><option value="IWM">Russell 2000 (IWM)</option></select></div>
           <div class="field"><label>Frequency</label><select id="p-freq" style="width:100%"><option value="daily">Daily</option><option value="monthly">Monthly</option></select></div>
         </div>
-        <button class="run-btn" id="p-runBtn" onclick="runPortfolio()" style="width:100%">Run Portfolio Analysis</button>
-        <div class="status-bar" style="margin-top:10px;margin-bottom:0"><div class="sdot" id="p-dot"></div><span id="p-status">Set weights and click Run</span></div>
+        <button class="ghost-btn" id="p-runBtn" onclick="runPortfolio()" style="width:100%">Analyze current weights</button>
+        <div class="status-bar" style="margin-top:10px;margin-bottom:0"><div class="sdot" id="p-dot"></div><span id="p-status">Weights must add to 100%</span></div>
       </div>
       <div class="card" style="margin-top:14px"><div class="card-title">Email reports</div>
         <p style="font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:10px">Get this portfolio's exposures, risk, concentration and what changed, delivered by email. Uses the holdings and benchmark above.</p>
@@ -613,7 +632,7 @@ canvas{width:100%!important;display:block;}
         <div id="p-wl-list"><div class="wl-empty">No tickers saved yet.</div></div>
       </div>
     </div>
-    <div id="p-output"><div class="empty">Build portfolio on the left<br><div class="small">Add tickers · Set weights (sum to 100%) · Run</div></div></div>
+    <div id="p-output"><div class="empty">Build your portfolio on the left<br><div class="small">Add holdings · Answer five questions · Get model weights</div></div></div>
   </div>
 </div>
 
@@ -14807,7 +14826,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 function switchTab(tab){
   ['single','portfolio','compare'].forEach(t=>{document.getElementById(`pane-${t}`).style.display=t===tab?'block':'none';document.getElementById(`tab-${t}`).className='tab'+(t===tab?' active':'');});
   if(tab==='compare')renderChips();
-  if(tab==='portfolio'){renderPortWL();renderWeightRows();updateWeightBar();}
+  if(tab==='portfolio'){renderPortWL();renderWeightRows();updateWeightBar();renderBmpQ();}
 }
 function setS(id,msg,st='active'){document.getElementById(`${id}-dot`).className='sdot '+st;document.getElementById(`${id}-status`).textContent=msg;}
 function upP(id,st,msg){const el=document.getElementById('prog-'+id);if(!el)return;el.querySelector('.dot').className='dot '+st;el.querySelector('.label').textContent=msg;}
@@ -14824,14 +14843,36 @@ function toggleChip(t){selTickers.has(t)?selTickers.delete(t):selTickers.add(t);
 function selAll(){selTickers.add('SPY');loadWL().forEach(i=>selTickers.add(i.ticker));renderChips();}
 function selNone(){selTickers.clear();renderChips();}
 
+// ── Twelve Data request pacing ────────────────────────────────────────────────
+// The free plan allows 8 requests a minute. When a request is turned away for the per-minute limit,
+// wait until the next minute starts and try again, so big portfolios load slowly instead of failing.
+// Callers can set TD_WAIT to a function(secondsLeft,label) to show the wait in their own progress UI.
+let TD_WAIT=null;
+const tdSleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function tdJSON(url,label=''){
+  for(let attempt=0;attempt<6;attempt++){
+    let resp;try{resp=await fetch(url);}catch(e){if(attempt<2){await tdSleep(1500);continue;}throw new Error(`Couldn't reach Twelve Data (${e.message})`);}
+    let d=null;try{d=await resp.json();}catch(e){}
+    const msg=(d&&d.message)||'',limited=resp.status===429||(d&&d.code===429)||/api credits/i.test(msg);
+    if(limited&&!/for the day|daily/i.test(msg)){
+      const wait=61-new Date().getSeconds();
+      for(let left=wait;left>0;left--){if(TD_WAIT)TD_WAIT(left,label);else if(left===wait)toast(`Twelve Data's free plan allows 8 requests a minute. Waiting ${wait}s, then continuing…`);await tdSleep(1000);}
+      if(TD_WAIT)TD_WAIT(0,label);continue;
+    }
+    if(limited)throw new Error("You've used today's 800 free Twelve Data requests. They reset at midnight UTC, or a paid Twelve Data plan removes the daily cap.");
+    if(!resp.ok&&!d)throw new Error(`Twelvedata HTTP ${resp.status}`);
+    return d;
+  }
+  throw new Error('Twelve Data kept hitting its per-minute limit. Try again in a minute.');
+}
+
 // ── Twelvedata: price data ────────────────────────────────────────────────────
 async function fetchTwelvedata(ticker, outputsize=504) {
   const apiKey=getApiKey(); if(!apiKey)throw new Error('No API key. Get a free key at twelvedata.com/register');
   const ck=`td_${ticker}_${outputsize}`; if(CACHE[ck])return CACHE[ck];
   const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(ticker)}&interval=1day&outputsize=${outputsize}&apikey=${apiKey}&order=asc`;
-  const resp=await fetch(url); if(!resp.ok)throw new Error(`Twelvedata HTTP ${resp.status}`);
-  const d=await resp.json();
-  if(d.status==='error')throw new Error(`${ticker}: ${d.message}`);
+  const d=await tdJSON(url,ticker);
+  if(d.status==='error')throw new Error(`${ticker}: ${String(d.message||'error').replace(/\*\*/g,'')}`);
   if(!d.values||d.values.length===0)throw new Error(`No data for ${ticker}`);
   const clean=d.values.filter(v=>v.close&&parseFloat(v.close)>0);
   if(clean.length<20)throw new Error(`Only ${clean.length} valid prices for ${ticker}`);
@@ -14850,7 +14891,7 @@ async function fetchFundamentals(ticker) {
   const ck=`fund_${ticker}_${Math.floor(Date.now()/60000)}`; if(CACHE[ck])return CACHE[ck];
   try {
     const [quote, sec] = await Promise.all([
-      fetch(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(ticker)}&apikey=${apiKey}`).then(r=>r.json()).catch(()=>({})),
+      tdJSON(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(ticker)}&apikey=${apiKey}`,ticker+' quote').catch(()=>({})),
       (async()=>{const u=`${SKOPE_API}/fundamentals?ticker=${encodeURIComponent(ticker)}`;for(let i=0;i<2;i++){try{const r=await fetch(u);const j=await r.json();if(r.ok||i===1)return j;}catch(e){if(i===1)return null;}await new Promise(z=>setTimeout(z,900));}return null;})()
     ]);
     const f = sec && sec.ok ? sec.data : null, q52 = quote.fifty_two_week || {};
@@ -15337,7 +15378,7 @@ function loadPortfolioFromLink(){
     if(!rows.length)return;portfolioRows=rows;savePort();renderWeightRows();updateWeightBar();
     const b=q.get('b');if(['SPY','QQQ','IWM'].includes(b))document.getElementById('p-bench').value=b;
     const m=document.getElementById('p-model');if(m)m.value='ff5mom';const f=document.getElementById('p-freq');if(f)f.value='monthly';
-    showApp();switchTab('portfolio');toast('Loaded the portfolio from your report. Click Run to see the full analysis.');
+    showApp();switchTab('portfolio');toast('Loaded the portfolio from your report. Click "Analyze current weights" for the full analysis.');
     history.replaceState(null,'',location.pathname);}catch(e){console.warn(e);}
 }
 document.addEventListener('DOMContentLoaded',()=>setTimeout(loadPortfolioFromLink,50));
@@ -15398,14 +15439,14 @@ function saveNamedPortfolio(){
   // clean slate for the next portfolio (the saved one is in the dropdown)
   portfolioRows=[];savePort();renderWeightRows();updateWeightBar();
   document.getElementById('pf-select').value='';document.getElementById('pf-del').style.display='none';
-  document.getElementById('p-output').innerHTML='<div class="empty">Build portfolio on the left<br><div class="small">Add tickers · Set weights (sum to 100%) · Run</div></div>';
+  document.getElementById('p-output').innerHTML='<div class="empty">Build your portfolio on the left<br><div class="small">Add holdings · Answer five questions · Get model weights</div></div>';
   window.LAST_PORT=null;
   toast(USER?`✓ Saved "${name}" to your account`:`✓ Saved "${name}" in this browser. Sign in to keep it on every device.`);
 }
 function loadSavedPortfolio(name){const p=loadPFs().find(x=>x.name===name);if(!p)return;
   portfolioRows=p.rows.map(r=>({...r}));savePort();renderWeightRows();updateWeightBar();
   if(p.bench)document.getElementById('p-bench').value=p.bench;
-  try{showApp();switchTab('portfolio');}catch(e){}const s=document.getElementById('pf-select');if(s){s.value=name;document.getElementById('pf-del').style.display='';}toast(`Loaded "${name}". Click Run to analyze it.`);}
+  try{showApp();switchTab('portfolio');}catch(e){}const s=document.getElementById('pf-select');if(s){s.value=name;document.getElementById('pf-del').style.display='';}toast(`Loaded "${name}". Build model weights or analyze it.`);}
 function pfSelectChanged(v){document.getElementById('pf-del').style.display=v?'':'none';if(v)loadSavedPortfolio(v);}
 function deleteSavedPortfolio(name){if(!name)return;if(!confirm(`Delete the saved portfolio "${name}"?`))return;
   savePFs(loadPFs().filter(p=>p.name!==name));
@@ -15831,7 +15872,7 @@ async function runSingle(){
   </div></div>`;
 
   try{
-    setS('s',`Fetching ${ticker}...`,'active');
+    setS('s',`Fetching ${ticker}...`,'active');TD_WAIT=(sec,l)=>setS('s',sec?`Twelve Data free-plan limit (8 a minute): continuing with ${l} in ${sec}s…`:`Fetching ${ticker}...`,'active');
     upP('price','loading',`Fetching ${ticker} prices and SEC financials...`);
 
     // Fetch price + fundamentals in parallel; filing highlights load in the background
@@ -15875,7 +15916,7 @@ async function runSingle(){
     setS('s','Error: '+e.message,'error');
     document.getElementById('s-output').innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Error</div><p style="font-family:inherit;font-size:12px;color:var(--red);margin-bottom:8px">${e.message}</p><p style="font-size:12px;color:var(--text2)">Check the ticker and your API key.</p></div>`;
   }
-  document.getElementById('s-runBtn').disabled=false;
+  TD_WAIT=null;document.getElementById('s-runBtn').disabled=false;
 }
 
 function priceBlock(f){
@@ -15957,7 +15998,7 @@ async function runPortfolio(){
   const model=document.getElementById('p-model').value,outputsize=parseInt(document.getElementById('p-period').value),bench=document.getElementById('p-bench').value,freq=document.getElementById('p-freq').value;
   const nA=['qmj','kitchen'].includes(model);
   document.getElementById('p-runBtn').disabled=true;
-  const weights=portfolioRows.map(r=>({ticker:r.ticker,name:r.name,w:r.weight/100}));
+  const weights=portfolioRows.filter(r=>r.weight>0).map(r=>({ticker:r.ticker,name:r.name,w:r.weight/100}));
   document.getElementById('p-output').innerHTML=`<div class="card"><div class="card-title">Building Portfolio</div><div class="prog-wrap">
     ${weights.map(w=>`<div class="pi" id="prog-${w.ticker}"><div class="dot loading"></div><span class="label">${w.ticker} (${(w.w*100).toFixed(1)}%)...</span></div>`).join('')}
     <div class="pi" id="prog-bench"><div class="dot"></div><span class="label">Benchmark (${bench})...</span></div>
@@ -15967,7 +16008,7 @@ async function runPortfolio(){
     <div class="pi" id="prog-reg"><div class="dot"></div><span class="label">OLS regression</span></div>
   </div></div>`;
   try{
-    setS('p','Fetching...','active');
+    setS('p','Fetching...','active');TD_WAIT=(sec,l)=>setS('p',sec?`Twelve Data free-plan limit (8 a minute): continuing with ${l} in ${sec}s…`:'Fetching...','active');
     for(const w of weights){try{await fetchTwelvedata(w.ticker,outputsize);upP(w.ticker,'ok',`${w.ticker} ✓`);}catch(e){upP(w.ticker,'fail',`${w.ticker}: ${e.message}`);throw e;}}
     upP('bench','loading','...');const benchData=await fetchTwelvedata(bench,outputsize);upP('bench','ok',`${bench} ✓`);
     upP('ff','loading','...');const{ffData,momData}=await loadFFData(model,freq);
@@ -16000,7 +16041,7 @@ async function runPortfolio(){
     renderPortResults(weights,model,result,pA,mktRaw,st,benchSt,benchRets,annF,!ffData,freq,bench);
     renderPortRisk(weights,outputsize,freq,bench).catch(e=>console.warn('risk',e));
   }catch(e){setS('p','Error: '+e.message,'error');document.getElementById('p-output').innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Error</div><p style="font-family:inherit;font-size:12px;color:var(--red)">${e.message}</p></div>`;}
-  document.getElementById('p-runBtn').disabled=false;
+  TD_WAIT=null;document.getElementById('p-runBtn').disabled=false;
 }
 
 // Portfolio results are split into tabs, like the Individual page
@@ -16086,6 +16127,219 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
 }
 
 // ── Comparison ────────────────────────────────────────────────────────────────
+// ── Build my portfolio: a few answers → model weights ─────────────────────────
+// Risk profile: willingness (how you react to losses, what you want) and ability (horizon, liquidity
+// needs, income). The lower of the two sets a target volatility. Expected returns come from each
+// holding's factor betas × long-run factor premia (alpha set to zero); risk comes from a factor-model
+// covariance (B Ω Bᵀ + residual variance). The optimizer finds the long-only mix with the highest
+// expected return at the target volatility, with at most 20% in any one holding. Cash (BIL) and
+// bonds (AGG) can be added for lower-risk profiles and are not capped.
+const BMP_CAP=0.20, BMP_HAIRCUT=0.5, BMP_MKT_PREM=0.06, BMP_BOND_PREM=0.010, BMP_ANS_KEY='skope_bmp_answers';
+const BMP_CASH='BIL', BMP_BOND='AGG';
+const BMP_Q=[
+  {k:'hz',ab:1,q:'When will you need most of this money?',o:[['Within 3 years',1],['3–5 years',2],['5–10 years',3],['10–20 years',4],['20+ years',5]]},
+  {k:'drop',q:'Your portfolio falls 25% in three months. What do you do?',o:[['Sell everything',1],['Sell some',2],['Hold and wait',4],['Buy more',5]]},
+  {k:'goal',q:'Which matters more to you?',o:[['Protecting what I have',1],['Mostly stability',2],['A balance',3],['Mostly growth',4],['Maximum growth',5]]},
+  {k:'need',ab:1,q:'Could you need to pull money out early, for an emergency or a big purchase?',o:[['No, that’s covered',0],['Possibly',-1],['Likely',-2]]},
+  {k:'inc',ab:1,q:'How steady is your income?',o:[['Steady',0],['It varies',-1]]},
+];
+const BMP_PROF=[null,
+  {name:'Conservative',vol:0.06},{name:'Moderately conservative',vol:0.09},{name:'Moderate',vol:0.12},
+  {name:'Growth',vol:0.15},{name:'Aggressive',vol:0.18}];
+const BMP_FN=['Market','Size','Value','Profitability','Investment','Momentum'];
+let BMP_ANS={};try{BMP_ANS=JSON.parse(localStorage.getItem(BMP_ANS_KEY)||'{}')||{};}catch(e){BMP_ANS={};}
+
+function bmpScore(a=BMP_ANS){
+  if(BMP_Q.some(q=>a[q.k]==null))return null;
+  const W=Math.max(1,Math.min(5,Math.round((a.drop+a.goal)/2))),C=Math.max(1,Math.min(5,a.hz+a.need+a.inc)),R=Math.min(W,C);
+  return{W,C,R,...BMP_PROF[R]};
+}
+function bmpSet(k,v){BMP_ANS[k]=v;try{localStorage.setItem(BMP_ANS_KEY,JSON.stringify(BMP_ANS));}catch(e){}renderBmpQ();}
+function renderBmpQ(){
+  const el=document.getElementById('bmp-q');if(!el)return;
+  el.innerHTML=BMP_Q.map(q=>`<div class="bmp-qi"><div class="bmp-qt">${q.q}</div><div class="bmp-opts">${q.o.map(([l,v])=>`<button class="bmp-opt${BMP_ANS[q.k]===v?' on':''}" onclick="bmpSet('${q.k}',${v})">${l}</button>`).join('')}</div></div>`).join('');
+  const s=bmpScore(),sc=document.getElementById('bmp-score');
+  sc.innerHTML=s?`<div class="bmp-prof"><div><b>${s.name}</b> <span class="bmp-r">${s.R} of 5</span></div><div class="bmp-ps">Willingness ${s.W} · ability ${s.C}. Skope uses the lower of the two, which points to about <b>${Math.round(s.vol*100)}%</b> volatility a year.</div></div>`
+    :`<div class="bmp-ps">Answer all ${BMP_Q.length} to see your risk profile.</div>`;
+}
+
+// Long-run factor premia and their covariance, from the bundled Ken French monthly data
+function bmpFactors(){
+  if(CACHE.bmpF)return CACHE.bmpF;
+  const ff=fetchFF('ff5m',FF_FIELDS.ff5m),mo=fetchFF('momm',FF_FIELDS.momm);if(!ff||!mo)throw new Error('Fama-French factor data is unavailable');
+  const ds=Object.keys(ff).filter(d=>mo[d]&&isFinite(ff[d].mkt_rf)).sort();
+  const X=ds.map(d=>[ff[d].mkt_rf,ff[d].smb,ff[d].hml,ff[d].rmw,ff[d].cma,mo[d].mom]),n=X.length,k=6;
+  const raw=Array.from({length:k},(_,j)=>X.reduce((s,r)=>s+r[j],0)/n);
+  const lam=raw.map((v,j)=>j===0?BMP_MKT_PREM/12:v*BMP_HAIRCUT);
+  const Om=Array.from({length:k},(_,i)=>Array.from({length:k},(_,j)=>X.reduce((s,r)=>s+(r[i]-raw[i])*(r[j]-raw[j]),0)/(n-1)));
+  const last=ds.slice(-12),rf=last.reduce((s,d)=>s+ff[d].rf,0)/last.length*12;
+  return CACHE.bmpF={lam,raw,Om,rf,from:ds[0],to:ds[ds.length-1]};
+}
+// One holding: monthly regression on FF5 + momentum → betas and residual variance
+async function bmpAsset(ticker,outputsize){
+  if(ticker===BMP_CASH)return{ticker,name:'Cash (T-bill ETF)',b:[0,0,0,0,0,0],res:0,kind:'cash',n:0};
+  const d=await fetchTwelvedata(ticker,outputsize),rows=rkRows(d.monthly);
+  if(rows.length<24)throw new Error(`${ticker}: only ${rows.length} months of history overlap the factor data (need 24)`);
+  const r=ols(rows.map(x=>x.y),rkCols(rows,6)),res=r.resid.reduce((s,e)=>s+e*e,0)/(r.n-7);
+  return{ticker,name:d.name||ticker,b:r.betas,res,r2:r.r2,n:r.n,kind:ticker===BMP_BOND?'bond':'risky'};
+}
+// Annual expected excess returns and covariance for a list of assets
+function bmpInputs(assets,F){
+  const n=assets.length,mu=assets.map(a=>a.kind==='cash'?0:a.kind==='bond'?BMP_BOND_PREM:12*a.b.reduce((s,b,j)=>s+b*F.lam[j],0));
+  const S=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>{const bi=assets[i].b,bj=assets[j].b;let v=0;
+    for(let p=0;p<6;p++)for(let q=0;q<6;q++)v+=bi[p]*F.Om[p][q]*bj[q];return 12*(v+(i===j?assets[i].res:0));}));
+  return{mu,S};
+}
+const bmpMv=(S,w)=>S.map(r=>r.reduce((s,v,j)=>s+v*w[j],0));
+const bmpVar=(S,w)=>{const Sw=bmpMv(S,w);return w.reduce((s,v,i)=>s+v*Sw[i],0);};
+// Projection onto {0 ≤ w ≤ u, Σw = 1}
+function bmpProj(v,u){let lo=Math.min(...v.map((x,i)=>x-u[i]))-1,hi=Math.max(...v)+1;
+  for(let it=0;it<80;it++){const t=(lo+hi)/2,s=v.reduce((a,x,i)=>a+Math.min(u[i],Math.max(0,x-t)),0);if(s>1)lo=t;else hi=t;}
+  const t=(lo+hi)/2;return v.map((x,i)=>Math.min(u[i],Math.max(0,x-t)));}
+function bmpLmax(S){const n=S.length;let v=Array(n).fill(1/Math.sqrt(n)),l=0;
+  for(let it=0;it<100;it++){const w=bmpMv(S,v),nr=Math.hypot(...w);if(nr<1e-14)return 0;l=nr;v=w.map(x=>x/nr);}return l;}
+// max wᵀμ − (A/2) wᵀΣw, long-only with caps, fully invested (projected gradient)
+function bmpSolve(mu,S,u,A,w0,L){
+  L=L??bmpLmax(S);const step=1/Math.max(A*L,1e-6);let w=w0?w0.slice():bmpProj(mu.map(()=>1/mu.length),u);
+  for(let it=0;it<4000;it++){const Sw=bmpMv(S,w),nw=bmpProj(w.map((x,i)=>x+step*(mu[i]-A*Sw[i])),u);
+    const d=nw.reduce((s,x,i)=>s+Math.abs(x-w[i]),0);w=nw;if(d<1e-10)break;}
+  return w;
+}
+function bmpStats(w,mu,S,assets,rf){const ex=w.reduce((s,v,i)=>s+v*mu[i],0),vol=Math.sqrt(Math.max(0,bmpVar(S,w)));
+  return{ret:rf+ex,ex,vol,bad:rf+ex-1.645*vol,sharpe:vol>1e-6?ex/vol:null,beta:BMP_FN.map((_,j)=>w.reduce((s,v,i)=>s+v*assets[i].b[j],0))};}
+// Highest expected return at (or under) the target volatility
+function bmpTarget(mu,S,u,target){
+  const L=bmpLmax(S),sol=A=>bmpSolve(mu,S,u,A,null,L),vol=w=>Math.sqrt(Math.max(0,bmpVar(S,w)));
+  let lo=Math.log(0.05),hi=Math.log(2000),wLo=sol(Math.exp(lo));
+  if(vol(wLo)<=target)return{w:wLo,A:Math.exp(lo),hit:false};
+  let wHi=sol(Math.exp(hi));if(vol(wHi)>target)return{w:wHi,A:Math.exp(hi),hit:false};
+  for(let it=0;it<40;it++){const m=(lo+hi)/2,w=sol(Math.exp(m));if(vol(w)>target)lo=m;else{hi=m;wHi=w;}}
+  return{w:wHi,A:Math.exp(hi),hit:true};
+}
+// Drop slivers under 0.5%, re-solve, round to 0.1% so the weights add to exactly 100%
+function bmpClean(mu,S,u,target,res){
+  const keep=res.w.map(x=>x>=0.005),u2=u.map((x,i)=>keep[i]?x:0);let w=bmpTarget(mu,S,u2,target).w;
+  let r=w.map(x=>Math.round(x*1000)/1000);const d=Math.round((1-r.reduce((s,x)=>s+x,0))*1000)/1000;
+  if(d){const i=r.indexOf(Math.max(...r));r[i]=Math.round((r[i]+d)*1000)/1000;}return r;
+}
+function bmpFrontier(mu,S,u,rf){const L=bmpLmax(S),pts=[];let w=null;
+  for(let i=0;i<=36;i++){const A=Math.exp(Math.log(2000)-i*(Math.log(2000)-Math.log(0.05))/36);w=bmpSolve(mu,S,u,A,w,L);
+    const ex=w.reduce((s,v,j)=>s+v*mu[j],0),vol=Math.sqrt(Math.max(0,bmpVar(S,w)));pts.push({x:vol*100,y:(rf+ex)*100,sh:vol>0.01?ex/vol:-1,w:w.slice()});}
+  return pts;}
+
+async function runBuild(){
+  const prof=bmpScore();
+  if(!prof){toast('Answer the questions in Step 2 first');document.getElementById('bmp-q')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
+  const sleeve=document.getElementById('bmp-sleeve').checked;
+  let tick=portfolioRows.map(r=>r.ticker);
+  if(!sleeve)tick=tick.filter(t=>t!==BMP_CASH&&t!==BMP_BOND);
+  if(tick.filter(t=>t!==BMP_CASH&&t!==BMP_BOND).length<2){toast('Add at least two stocks or ETFs in Step 1');return;}
+  if(!sleeve&&tick.length*BMP_CAP<1){toast(`With a 20% cap you need at least 5 holdings, or allow cash and bonds`);return;}
+  if(LIVE||!getApiKey()){openKeyPage(LIVE?LIVE_MORE:'Add your Twelve Data key to run real tickers. You only need to do this once.');return;}
+  if(sleeve){for(const t of[BMP_BOND,BMP_CASH])if(!tick.includes(t))tick.push(t);}
+  const outputsize=Math.max(1260,parseInt(document.getElementById('p-period').value)),bench=document.getElementById('p-bench').value;
+  const btn=document.getElementById('bmp-btn');btn.disabled=true;
+  const fetchList=[...tick.filter(t=>t!==BMP_CASH),...(tick.includes(bench)?[]:[bench])];
+  const out=document.getElementById('p-output');
+  out.innerHTML=`<div class="card"><div class="card-title">Building your portfolio</div>
+    <p class="bmp-ps" style="margin-bottom:10px">Estimating factor exposures for ${fetchList.length} holdings. ${fetchList.length>8?`Twelve Data's free plan allows 8 requests a minute, so this takes about ${Math.ceil(fetchList.length/8)} minutes. Skope waits and continues on its own.`:''}</p>
+    <div class="prog-wrap">${fetchList.map(t=>`<div class="pi" id="prog-b${t}"><div class="dot"></div><span class="label">${t}</span></div>`).join('')}
+    <div class="pi" id="prog-bopt"><div class="dot"></div><span class="label">Optimize</span></div></div></div>`;
+  TD_WAIT=(sec,l)=>setS('bmp',sec?`Free-plan limit (8 a minute): continuing with ${l} in ${sec}s…`:'Fetching prices…','active');
+  try{
+    setS('bmp','Fetching prices…','active');
+    const F=bmpFactors(),assets=[],skipped=[];let benchA=null;
+    for(const t of fetchList){upP('b'+t,'loading',`${t}…`);
+      try{const a=await bmpAsset(t,outputsize);if(tick.includes(t))assets.push(a);if(t===bench)benchA=a;upP('b'+t,'ok',`${t} · ${a.n} months · R² ${(a.r2*100).toFixed(0)}%`);}
+      catch(e){if(/today|daily/i.test(e.message)){upP('b'+t,'fail',`${t}: ${e.message}`);throw e;}
+        upP('b'+t,'fail',`${t}: skipped. ${e.message}`);if(tick.includes(t))skipped.push(`${t} (${e.message.replace(t+': ','')})`);}}
+    if(tick.includes(BMP_CASH))assets.push(await bmpAsset(BMP_CASH));
+    const risky=assets.filter(a=>a.kind==='risky');
+    if(risky.length<2)throw new Error('Need at least two stocks or ETFs with enough price history');
+    if(!sleeve&&assets.length*BMP_CAP<1)throw new Error('With a 20% cap, at least 5 holdings need enough price history');
+    upP('bopt','loading','Optimizing…');setS('bmp','Optimizing…','active');
+    const{mu,S}=bmpInputs(assets,F),u=assets.map(a=>a.kind==='risky'?BMP_CAP:1);
+    const res=bmpTarget(mu,S,u,prof.vol),w=bmpClean(mu,S,u,prof.vol,res);
+    const model=bmpStats(w,mu,S,assets,F.rf);
+    const curRows=portfolioRows.filter(r=>assets.some(a=>a.ticker===r.ticker)),curTot=curRows.reduce((s,r)=>s+(+r.weight||0),0);
+    let cur=null;if(Math.abs(curTot-100)<0.5){const cw=assets.map(a=>(+(curRows.find(r=>r.ticker===a.ticker)?.weight)||0)/100);cur={w:cw,...bmpStats(cw,mu,S,assets,F.rf)};}
+    let bst=null;if(benchA){const{mu:bm,S:bS}=bmpInputs([benchA],F);bst=bmpStats([1],bm,bS,[benchA],F.rf);}
+    const front=bmpFrontier(mu,S,u,F.rf);
+    upP('bopt','ok','Done');setS('bmp',`${prof.name} · expected ${pct(model.ret,1)} a year at ${pct(model.vol,1)} volatility`,'done');
+    window.LAST_BUILD={assets,w,mu,S,prof,model,cur,bst,bench,front,F,hit:res.hit,skipped,sleeve};
+    renderBuild();
+  }catch(e){setS('bmp','Error: '+e.message,'error');out.innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Couldn't build the portfolio</div><p style="font-size:12.5px;color:var(--red)">${escH(e.message)}</p></div>`;}
+  TD_WAIT=null;btn.disabled=false;
+}
+
+function renderBuild(){
+  const B=window.LAST_BUILD;if(!B)return;const{assets,w,mu,S,prof,model,cur,bst,bench,F}=B;
+  const vol=assets.map((a,i)=>Math.sqrt(S[i][i])),rf=F.rf;
+  const order=assets.map((a,i)=>i).sort((i,j)=>w[j]-w[i]||(cur?cur.w[j]-cur.w[i]:0));
+  const label=a=>a.kind==='cash'?'Cash (T-bills)':a.kind==='bond'?'US bonds':escH((a.name||a.ticker).split(' ').slice(0,4).join(' '));
+  const p1=v=>v==null?'—':pct(v,1),chg=(a,b)=>{const d=(a-b)*100;return Math.abs(d)<0.05?'<span style="color:var(--text3)">—</span>':`<span class="${d>0?'pos':'neg'}">${d>0?'+':'−'}${Math.abs(d).toFixed(1)}</span>`;};
+  const col=(lbl,f,fmt=p1)=>`<tr><td>${lbl}</td>${cur?`<td>${fmt(f(cur))}</td>`:''}<td><b>${fmt(f(model))}</b></td>${bst?`<td>${fmt(f(bst))}</td>`:''}</tr>`;
+  const sleeveW=assets.reduce((s,a,i)=>s+(a.kind!=='risky'?w[i]:0),0);
+  const note=!B.hit&&model.vol<prof.vol-0.005?`These holdings can't reach ${Math.round(prof.vol*100)}% volatility with a 20% cap, so this is the highest-return mix available (${p1(model.vol)}).`
+    :!B.hit&&model.vol>prof.vol+0.005?`Even the lowest-risk mix of these holdings is above ${Math.round(prof.vol*100)}% volatility. ${B.sleeve?'':'Allowing cash and bonds would bring it down.'}`:'';
+  document.getElementById('p-output').innerHTML=`
+  <div class="card bmp-hero"><div class="card-title">Your model portfolio</div>
+    <div class="bmp-hrow"><div><div class="bmp-big">${prof.name}</div><div class="bmp-ps">Risk score ${prof.R} of 5 (willingness ${prof.W}, ability ${prof.C}) · target about ${Math.round(prof.vol*100)}% volatility a year${sleeveW>0.0005?` · ${p1(sleeveW)} in cash and bonds`:''}</div></div>
+    <div class="bmp-acts"><button class="ghost-btn" onclick="bmpUse(false)">Use these weights</button><button class="run-btn" onclick="bmpUse(true)">Analyze these weights</button></div></div>
+    ${note?`<div class="warn" style="margin-top:10px">${note}</div>`:''}
+    ${B.skipped.length?`<div class="warn" style="margin-top:10px">Left out: ${escH(B.skipped.join('; '))}.</div>`:''}
+  </div>
+  <div class="two-col">
+    <div class="card"><div class="card-title">Expected, per year</div>
+      <table class="ftbl"><tr><th></th>${cur?'<th>Current</th>':''}<th>Model</th>${bst?`<th>${bench}</th>`:''}</tr>
+      ${col('Expected return',s=>s.ret)}${col('Volatility',s=>s.vol)}${col('Bad year (1 in 20)',s=>s.bad)}${col('Sharpe ratio',s=>s.sharpe,v=>v==null?'—':v.toFixed(2))}${col('Market beta',s=>s.beta[0],v=>v.toFixed(2))}</table>
+      <div class="bmp-fine">A "bad year" is the return you'd expect to beat in 19 years out of 20, assuming normal returns. Real markets have fatter tails.${cur?'':' Enter current weights in Step 1 (adding to 100%) to compare.'}</div>
+    </div>
+    <div class="card"><div class="card-title">Efficient frontier</div><canvas id="bmp-front" height="230"></canvas></div>
+  </div>
+  <div class="card"><div class="card-title">Weights</div>
+    <table class="ftbl"><tr><th>Holding</th>${cur?'<th>Current</th>':''}<th>Model</th>${cur?'<th>Change (pts)</th>':''}<th>Expected return</th><th>Volatility</th><th>Market beta</th></tr>
+    ${order.map(i=>{const a=assets[i];return`<tr${w[i]<0.0005?' style="opacity:.55"':''}><td><b style="color:var(--accent)">${a.ticker}</b> <span style="color:var(--text3);font-size:11px">${label(a)}</span></td>${cur?`<td>${p1(cur.w[i])}</td>`:''}<td><b>${p1(w[i])}</b></td>${cur?`<td>${chg(w[i],cur.w[i])}</td>`:''}<td>${p1(rf+mu[i])}</td><td>${p1(vol[i])}</td><td>${a.b[0].toFixed(2)}</td></tr>`;}).join('')}</table>
+    <div class="bmp-fine">No more than 20% in any one stock or ETF. Cash and bonds aren't capped. Holdings under 0.5% are dropped.</div>
+  </div>
+  <div class="card"><div class="card-title">Factor exposures</div>
+    <table class="ftbl"><tr><th>Factor</th>${cur?'<th>Current</th>':''}<th>Model</th>${bst?`<th>${bench}</th>`:''}<th>Long-run premium used</th></tr>
+    ${BMP_FN.map((f,j)=>`<tr><td>${f}</td>${cur?`<td>${cur.beta[j].toFixed(2)}</td>`:''}<td><b>${model.beta[j].toFixed(2)}</b></td>${bst?`<td>${bst.beta[j].toFixed(2)}</td>`:''}<td>${pct(F.lam[j]*12,1)} a year</td></tr>`).join('')}</table>
+  </div>
+  <div class="card"><div class="card-title">How the weights are set</div><div class="bmp-how">
+    <p><b>Risk profile.</b> Your answers give a willingness score (how you'd react to a loss and what you want) and an ability score (time horizon, chance of needing the money early, income). Skope uses the lower of the two and sets a target volatility from it.</p>
+    <p><b>Expected returns.</b> Each holding's expected return is its betas to six factors (market, size, value, profitability, investment, momentum) times each factor's long-run average premium, plus the T-bill rate (${pct(rf,1)}). The market premium is set at ${pct(BMP_MKT_PREM,1)} a year, a forward-looking estimate below the ${pct(F.raw[0]*12,1)} US stocks earned over cash from ${ymLabel(F.from)} to ${ymLabel(F.to)}. The other premia are the Ken French averages over the same period, cut in half, since published factors have earned less after they were discovered. Alpha is set to zero: past outperformance isn't assumed to repeat. Bonds are assumed to earn ${pct(BMP_BOND_PREM,1)} a year over cash.</p>
+    <p><b>Risk.</b> Covariances come from the factor model: shared factor exposures plus each holding's own residual risk, from ${assets.find(a=>a.n)?.n||'~60'} months of returns. That's steadier than raw historical correlations, and it captures overlap such as an ETF holding the same stocks you own.</p>
+    <p><b>Optimization.</b> The highest expected return at your target volatility. Long only, at most 20% per holding, fully invested.</p>
+    <p class="bmp-fine">These are model weights from the assumptions above, not a recommendation. Expected returns are estimates and can be badly wrong. Skope is for informational and educational purposes only and is not investment advice.</p>
+  </div></div>`;
+  drawBmpFront();
+}
+function drawBmpFront(){
+  const B=window.LAST_BUILD,el=document.getElementById('bmp-front');if(!B||!el||typeof Chart==='undefined')return;
+  if(window._bmpChart)window._bmpChart.destroy();
+  const pts=B.front.filter((p,i,a)=>i===0||Math.abs(p.x-a[i-1].x)>0.05||Math.abs(p.y-a[i-1].y)>0.05);
+  const ms=pts.reduce((b,p)=>p.sh>b.sh+1e-4||(Math.abs(p.sh-b.sh)<=1e-4&&p.x>b.x)?p:b,pts[0]);
+  const ds=[{label:'Efficient frontier',data:pts.map(p=>({x:p.x,y:p.y})),showLine:true,borderColor:'#9aa59f',backgroundColor:'#9aa59f',pointRadius:0,borderWidth:2,tension:0.25,order:5},
+    {label:'Model portfolio',data:[{x:B.model.vol*100,y:B.model.ret*100}],backgroundColor:'#1d4433',pointRadius:7,pointStyle:'circle',order:1},
+    {label:'Highest Sharpe',data:[{x:ms.x,y:ms.y}],backgroundColor:'#c8902e',pointRadius:5,pointStyle:'rectRot',order:2}];
+  if(B.cur)ds.push({label:'Current weights',data:[{x:B.cur.vol*100,y:B.cur.ret*100}],backgroundColor:'#a8483a',pointRadius:6,pointStyle:'triangle',order:1});
+  if(B.bst)ds.push({label:B.bench,data:[{x:B.bst.vol*100,y:B.bst.ret*100}],backgroundColor:'#4a78b5',pointRadius:5,pointStyle:'rect',order:3});
+  window._bmpChart=new Chart(el,{type:'scatter',data:{datasets:ds},options:{responsive:true,animation:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:9,font:{size:10.5},usePointStyle:true}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y.toFixed(1)}% return, ${c.parsed.x.toFixed(1)}% volatility`}}},
+    scales:{x:{title:{display:true,text:'Expected volatility (% a year)',font:{size:10.5}},ticks:{font:{size:10}},min:0},y:{title:{display:true,text:'Expected return (% a year)',font:{size:10.5}},ticks:{font:{size:10}}}}}});
+}
+// Put the model weights into Step 1 (adding BIL/AGG rows if used), optionally run the full analysis
+function bmpUse(analyze){
+  const B=window.LAST_BUILD;if(!B)return;
+  const keep=new Map(portfolioRows.map(r=>[r.ticker,r]));
+  portfolioRows=B.assets.map((a,i)=>({ticker:a.ticker,name:keep.get(a.ticker)?.name||(a.kind==='cash'?'Cash (T-bill ETF)':a.kind==='bond'?'US aggregate bonds':a.name||a.ticker),weight:+(B.w[i]*100).toFixed(1)}))
+    .sort((a,b)=>b.weight-a.weight);
+  for(const r of keep.values())if(!portfolioRows.some(x=>x.ticker===r.ticker))portfolioRows.push({...r,weight:0});
+  savePort();renderWeightRows();updateWeightBar();
+  if(analyze){runPortfolio();window.scrollTo({top:0,behavior:'smooth'});}else toast('Model weights copied to Step 1. Save them as a portfolio to keep them.');
+}
+
 async function runComparison(){
   const model=document.getElementById('c-model').value,outputsize=parseInt(document.getElementById('c-period').value),freq=document.getElementById('c-freq').value;
   if(LIVE||!getApiKey()){openKeyPage(LIVE?LIVE_MORE:'Add your Twelve Data key to run real tickers. You only need to do this once.');return;}
