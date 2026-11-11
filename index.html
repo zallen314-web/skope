@@ -131,7 +131,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,'S
 .rk-tbl td{padding:8px;border-bottom:1px solid var(--border2);vertical-align:top;font-variant-numeric:tabular-nums;}.rk-tbl .sub{display:block;font-size:11px;color:var(--text3);}
 .rk-bar{height:5px;background:#f1f3f2;border-radius:3px;margin:3px 0;overflow:hidden;}.rk-bar span{display:block;height:100%;border-radius:3px;}
 .rk-note{font-size:11.5px;color:var(--text3);margin-top:10px;line-height:1.5;}.rk-head{font-family:'Source Serif 4',Georgia,serif;font-size:22px;margin:26px 0 12px;}
-.rs-disc{border:1px solid var(--border);border-left:3px solid var(--accent);background:#f6f8f7;padding:12px 14px;font-size:12.5px;line-height:1.55;color:var(--text2);margin-bottom:16px;}.rs-disc b{color:var(--text);}
+.rs-disc{font-size:11.5px;line-height:1.6;color:var(--text3);font-weight:400;margin-top:22px;}.rs-disc b{font-weight:600;color:inherit;}
 .rs-list{display:grid;gap:12px;}.rs-item{border:1px solid var(--border);background:#fff;padding:16px 18px;display:flex;justify-content:space-between;gap:18px;align-items:flex-start;}
 .rs-item h4{font-family:'Source Serif 4',Georgia,serif;font-size:19px;font-weight:600;margin:0 0 4px;line-height:1.3;}.rs-meta{font-size:12px;color:var(--text3);margin-bottom:6px;}.rs-meta b{color:var(--accent);font-weight:600;}
 .rs-sum{font-size:13.5px;color:var(--text2);line-height:1.5;}.rs-open{flex-shrink:0;border:1px solid var(--accent);color:var(--accent);padding:7px 14px;font:600 12.5px 'Inter',sans-serif;text-decoration:none;white-space:nowrap;}.rs-open:hover{background:var(--accent);color:#fff;}
@@ -390,8 +390,8 @@ canvas{width:100%!important;display:block;}
 <div id="res-page"><div class="gl-wrap">
   <div class="gl-top"><div><h2>Research</h2><p>Equity research write-ups.</p></div>
     <div class="gl-tools"><input type="search" id="rs-q" placeholder="Search ticker or title…" oninput="rsFilter(this.value)"><button class="ghost-btn" onclick="closeResearch()">Back to Skope</button></div></div>
-  <div class="rs-disc"><b>Opinion, not advice.</b> Research on Skope reflects my personal opinions as of the date written. It is for informational and educational purposes only and is not financial, investment, tax or legal advice, or a recommendation to buy, sell or hold any security. I may hold positions in securities discussed. Do your own research and consult a licensed professional before making investment decisions.</div>
   <div id="rs-all" class="rs-list"><div class="rs-empty">Loading…</div></div>
+  <div class="rs-disc"><b>Opinion, not advice.</b> Research on Skope reflects my personal opinions as of the date written. It is for informational and educational purposes only and is not financial, investment, tax or legal advice, or a recommendation to buy, sell or hold any security. I may hold positions in securities discussed. Do your own research and consult a licensed professional before making investment decisions.</div>
   <div class="gl-foot"><a href="#" onclick="closeResearch();return false;">Back to Skope</a></div>
 </div></div>
 
@@ -14759,8 +14759,8 @@ function rsFilter(q){q=q.trim().toLowerCase();const list=(CACHE.research||[]).fi
 // Research tab on a stock or portfolio: write-ups covering those tickers
 async function renderResearchTab(elId,tickers,label){const el=document.getElementById(elId);if(!el)return;
   const set=new Set(tickers.map(t=>String(t).toUpperCase())),list=(await loadResearch()).filter(x=>rsTickers(x).some(t=>set.has(t)));
-  el.innerHTML=`<div class="card"><div class="card-title">Research · ${escH(label)}</div><div class="rs-disc">${RS_DISC}</div>
-    ${rsListHTML(list,`No Skope research on ${escH(label)} yet.`)}<div class="rk-note"><a href="#" onclick="openResearch();return false;" style="color:var(--accent)">Browse all research →</a></div></div>`;}
+  el.innerHTML=`<div class="card"><div class="card-title">Research · ${escH(label)}</div>
+    ${rsListHTML(list,`No Skope research on ${escH(label)} yet.`)}<div class="rk-note"><a href="#" onclick="openResearch();return false;" style="color:var(--accent)">Browse all research →</a></div><div class="rs-disc">${RS_DISC}</div></div>`;}
 let _glScroll=0;
 function openGlossary(){const a=document.getElementById('app');if(a.style.display==='none')showApp();a.classList.remove('keymode','resmode');_glScroll=window.scrollY;a.classList.add('glossmode');window.scrollTo(0,0);}
 function closeGlossary(){document.getElementById('app').classList.remove('glossmode');document.getElementById('gl-q').value='';glFilter('');window.scrollTo(0,_glScroll);}
