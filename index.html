@@ -435,7 +435,7 @@ canvas{width:100%!important;display:block;}
             <option value="kitchen">8-Factor (all)</option>
           </select>
         </div>
-        <div class="field"><label>Freq</label><select id="s-freq"><option value="daily">Daily</option><option value="monthly" selected>Monthly</option></select></div>
+        <input type="hidden" id="s-freq" value="monthly">
         <button class="run-btn" id="s-runBtn" onclick="runSingle()">Run</button>
       </div>
       <div class="status-bar"><div class="sdot" id="s-dot"></div><span id="s-status">Enter a ticker and click Run</span></div>
@@ -497,7 +497,7 @@ canvas{width:100%!important;display:block;}
         <p class="bmp-fine" style="margin-bottom:10px">Full performance, factor and risk analysis of the weights in Step 1.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div class="field"><label>Model</label><select id="p-model" style="width:100%"><option value="capm">CAPM</option><option value="ff3" selected>FF 3-Factor</option><option value="ff5">FF 5-Factor</option><option value="ff5mom">FF5+MOM</option><option value="qmj">FF5+QMJ</option><option value="kitchen">Kitchen Sink</option></select></div>
-          <div class="field"><label>Frequency</label><select id="p-freq" style="width:100%"><option value="daily">Daily</option><option value="monthly">Monthly</option></select></div>
+          <input type="hidden" id="p-freq" value="monthly">
         </div>
         <button class="ghost-btn" id="p-runBtn" onclick="runPortfolio()" style="width:100%">Analyze current weights</button>
         <div class="status-bar" style="margin-top:10px;margin-bottom:0"><div class="sdot" id="p-dot"></div><span id="p-status">Weights must add to 100%</span></div>
@@ -523,7 +523,7 @@ canvas{width:100%!important;display:block;}
   <div class="ctrl-row">
     <div class="field"><label>Model</label><select id="c-model"><option value="capm">CAPM</option><option value="ff3" selected>FF 3F</option><option value="ff5">FF 5F</option><option value="ff5mom">FF5+MOM</option><option value="qmj">FF5+QMJ</option><option value="kitchen">Kitchen Sink</option></select></div>
     <div class="field"><label>Period</label><select id="c-period"><option value="252">1 Year</option><option value="504">2 Years</option><option value="756">3 Years</option><option value="1260" selected>5 Years</option><option value="2520">10 Years</option><option value="5000">Max (~20 Years)</option></select></div>
-    <div class="field"><label>Freq</label><select id="c-freq"><option value="daily">Daily</option><option value="monthly">Monthly</option></select></div>
+    <input type="hidden" id="c-freq" value="monthly">
     <button class="run-btn" id="c-runBtn" onclick="runComparison()">Run Comparison</button>
   </div>
   <div class="status-bar"><div class="sdot" id="c-dot"></div><span id="c-status">Select tickers below</span></div>
@@ -14521,11 +14521,11 @@ const DEMO_TRUE={mkt:0.75,smb:-0.35,hml:0.30,rmw:0.45,cma:0.10};
 function demoSeries(){
   if(_demoVals)return _demoVals;
   const rows=FF_EMBED.ff5d.trim().split('\n').map(l=>l.split(',').map(Number));
-  let seed=11;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  let seed=42;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
   const g=()=>Math.sqrt(-2*Math.log(rnd()))*Math.cos(2*Math.PI*rnd());
   let p=100;const v=[];
   for(const[d,mkt,smb,hml,rmw,cma,rf]of rows){
-    const r=(rf+DEMO_TRUE.mkt*mkt+DEMO_TRUE.smb*smb+DEMO_TRUE.hml*hml+DEMO_TRUE.rmw*rmw+DEMO_TRUE.cma*cma)/100+0.012*g();
+    const r=(rf+DEMO_TRUE.mkt*mkt+DEMO_TRUE.smb*smb+DEMO_TRUE.hml*hml+DEMO_TRUE.rmw*rmw+DEMO_TRUE.cma*cma)/100+0.006*g();
     p*=1+r;const s=String(d);v.push({datetime:`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6)}`,close:p.toFixed(4)});}
   return _demoVals=v;
 }
@@ -14551,7 +14551,7 @@ function runDemo(){
   DEMO=true;closeKeyPage();showApp();try{switchTab('single');}catch(e){}
   document.getElementById('demo-banner').style.display='flex';
   document.getElementById('s-ticker').value=DEMO_TICKER;document.getElementById('s-period').value='2520';
-  document.getElementById('s-model').value='ff5';document.getElementById('s-freq').value='daily';
+  document.getElementById('s-model').value='ff5';document.getElementById('s-freq').value='monthly';
   SUBTAB='factors';runSingle();
 }
 function exitDemo(){
