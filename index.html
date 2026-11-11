@@ -435,12 +435,12 @@ canvas{width:100%!important;display:block;}
             <option value="kitchen">8-Factor (all)</option>
           </select>
         </div>
-        <div class="field"><label>Freq</label><select id="s-freq"><option value="daily">Daily</option><option value="monthly">Monthly</option></select></div>
+        <div class="field"><label>Freq</label><select id="s-freq"><option value="daily">Daily</option><option value="monthly" selected>Monthly</option></select></div>
         <button class="run-btn" id="s-runBtn" onclick="runSingle()">Run</button>
       </div>
       <div class="status-bar"><div class="sdot" id="s-dot"></div><span id="s-status">Enter a ticker and click Run</span></div>
       <div id="s-tickerBar" style="display:none"></div>
-      <div id="s-subtabs" class="subtabs" style="display:none"><button id="st-factors" class="stab" onclick="setSubTab('factors')">Factor exposures</button><button id="st-returns" class="stab" onclick="setSubTab('returns')">Return distribution</button><button id="st-risk" class="stab" onclick="setSubTab('risk')">Risk</button><button id="st-valuation" class="stab" onclick="setSubTab('valuation')">Valuation</button><button id="st-summary" class="stab on" onclick="setSubTab('summary')">Summary</button></div>
+      <div id="s-subtabs" class="subtabs" style="display:none"><button id="st-factors" class="stab on" onclick="setSubTab('factors')">Factor exposures</button><button id="st-returns" class="stab" onclick="setSubTab('returns')">Return distribution</button><button id="st-risk" class="stab" onclick="setSubTab('risk')">Risk</button><button id="st-valuation" class="stab" onclick="setSubTab('valuation')">Valuation</button><button id="st-summary" class="stab" onclick="setSubTab('summary')">Summary</button></div>
       <div id="s-valpage" style="display:none"><div id="s-fundamentals" style="display:none"></div><div id="s-val-empty" class="empty" style="display:none">Valuation data isn't available for this ticker.</div></div>
       <div id="s-output"><div class="empty">Enter ticker and run<br><div class="small">Get free API key at twelvedata.com/register</div></div></div>
     </div>
@@ -14552,7 +14552,7 @@ function runDemo(){
   document.getElementById('demo-banner').style.display='flex';
   document.getElementById('s-ticker').value=DEMO_TICKER;document.getElementById('s-period').value='2520';
   document.getElementById('s-model').value='ff5';document.getElementById('s-freq').value='daily';
-  SUBTAB='summary';runSingle();
+  SUBTAB='factors';runSingle();
 }
 function exitDemo(){
   DEMO=false;document.getElementById('demo-banner').style.display='none';
@@ -14583,7 +14583,7 @@ function openTry(){
 async function runLive(raw){
   const t=String(raw||'').trim().toUpperCase(),msg=document.getElementById('live-msg'),btn=document.getElementById('live-btn');
   if(!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(t)){msg.textContent='Enter a US ticker, like AAPL or SPY.';return;}
-  const go=()=>{showApp();try{switchTab('single');}catch(e){}document.getElementById('s-ticker').value=t;document.getElementById('s-period').value='1260';SUBTAB='summary';runSingle();};
+  const go=()=>{showApp();try{switchTab('single');}catch(e){}document.getElementById('s-ticker').value=t;document.getElementById('s-period').value='1260';SUBTAB='factors';runSingle();};
   if(localStorage.getItem(KEY_KEY)){DEMO=false;go();return;}                       // has a key already: just run it
   const used=localStorage.getItem(LIVE_USED);
   if(used&&used!==t){document.querySelectorAll('.notice-wrap.try').forEach(n=>n.remove());openKeyPage(LIVE_MORE);return;}
@@ -15473,7 +15473,7 @@ function downloadReport(){
 }
 
 // ── Sub-pages + auto-written factor summary (v21) ─────────────────────────────
-let SUBTAB='summary';
+let SUBTAB='factors';
 function setSubTab(name){
   SUBTAB=name;
   ['summary','factors','returns','risk','research','valuation'].forEach(n=>{const b=document.getElementById('st-'+n);if(b)b.classList.toggle('on',n===name);});
