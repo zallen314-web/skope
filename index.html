@@ -440,7 +440,7 @@ canvas{width:100%!important;display:block;}
       </div>
       <div class="status-bar"><div class="sdot" id="s-dot"></div><span id="s-status">Enter a ticker and click Run</span></div>
       <div id="s-tickerBar" style="display:none"></div>
-      <div id="s-subtabs" class="subtabs" style="display:none"><button id="st-summary" class="stab on" onclick="setSubTab('summary')">Summary</button><button id="st-factors" class="stab" onclick="setSubTab('factors')">Factor exposures</button><button id="st-returns" class="stab" onclick="setSubTab('returns')">Return distribution</button><button id="st-risk" class="stab" onclick="setSubTab('risk')">Risk</button><button id="st-research" class="stab" onclick="setSubTab('research')">Research</button><button id="st-valuation" class="stab" onclick="setSubTab('valuation')">Valuation</button></div>
+      <div id="s-subtabs" class="subtabs" style="display:none"><button id="st-factors" class="stab" onclick="setSubTab('factors')">Factor exposures</button><button id="st-returns" class="stab" onclick="setSubTab('returns')">Return distribution</button><button id="st-risk" class="stab" onclick="setSubTab('risk')">Risk</button><button id="st-valuation" class="stab" onclick="setSubTab('valuation')">Valuation</button><button id="st-summary" class="stab on" onclick="setSubTab('summary')">Summary</button></div>
       <div id="s-valpage" style="display:none"><div id="s-fundamentals" style="display:none"></div><div id="s-val-empty" class="empty" style="display:none">Valuation data isn't available for this ticker.</div></div>
       <div id="s-output"><div class="empty">Enter ticker and run<br><div class="small">Get free API key at twelvedata.com/register</div></div></div>
     </div>
@@ -15730,7 +15730,6 @@ async function runSingle(){
     setS('s',`${info.name||ticker} · R²=${(result.r2*100).toFixed(1)}% · α=${pct(result.alpha*annF)}${stars(result.alphaPVal)}`,'done');
     renderSingle(ticker,model,result,rawRets,mktRaw,st,annF,!ffData,freq);
     renderSingleRisk(ticker,stockData.monthly).catch(e=>console.warn('risk',e));
-    renderResearchTab('sp-research',[ticker],ticker).catch(e=>console.warn('research',e));
     hlP.then(h=>{if(curInfo&&curInfo.ticker!==ticker)return;window.LAST_HL=h;const el=document.getElementById('sp-filings');if(el)el.innerHTML=filingsHTML(h);});
   }catch(e){
     setS('s','Error: '+e.message,'error');
@@ -15783,7 +15782,7 @@ function renderSingle(ticker,model,result,rawRets,mktRaw,st,annF,proxy,freq){
     </div>
     </div>
     <div id="sp-risk" style="display:none"><div class="card"><div style="font-size:13px;color:var(--text3)">Calculating…</div></div></div>
-    <div id="sp-research" style="display:none"><div class="card"><div style="font-size:13px;color:var(--text3)">Loading…</div></div></div>
+
     <div id="sp-returns">
       <div class="two-col">
       <div class="card" style="margin-bottom:0"><div class="card-title">Return Stats · ${ticker} · ${freq}</div>
