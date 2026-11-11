@@ -388,11 +388,11 @@ canvas{width:100%!important;display:block;}
 </div>
 
 <div id="res-page"><div class="gl-wrap">
-  <div class="gl-top"><div><h2>Research</h2><p>Equity research write-ups.</p></div>
-    <div class="gl-tools"><input type="search" id="rs-q" placeholder="Search ticker or title…" oninput="rsFilter(this.value)"><button class="ghost-btn" onclick="closeResearch()">Back to Skope</button></div></div>
+  <div class="gl-top"><div><h2>Research</h2></div>
+    <div class="gl-tools"><button class="ghost-btn" onclick="closeResearch()">Back to Skope</button></div></div>
   <div id="rs-all" class="rs-list"><div class="rs-empty">Loading…</div></div>
-  <div class="rs-disc"><b>Opinion, not advice.</b> Research on Skope reflects my personal opinions as of the date written. It is for informational and educational purposes only and is not financial, investment, tax or legal advice, or a recommendation to buy, sell or hold any security. I may hold positions in securities discussed. Do your own research and consult a licensed professional before making investment decisions.</div>
   <div class="gl-foot"><a href="#" onclick="closeResearch();return false;">Back to Skope</a></div>
+  <div class="rs-disc"><b>Opinion, not advice.</b> Research on Skope reflects my personal opinions as of the date written. It is for informational and educational purposes only and is not financial, investment, tax or legal advice, or a recommendation to buy, sell or hold any security. I may hold positions in securities discussed. Do your own research and consult a licensed professional before making investment decisions.</div>
 </div></div>
 
 <div id="gloss-page"><div class="gl-wrap">
@@ -14752,10 +14752,10 @@ const rsSafeUrl=u=>/^(https?:\/\/|research\/)/i.test(String(u))?String(u):'#';
 function rsItemHTML(x){const tk=rsTickers(x);return`<div class="rs-item"><div><h4>${escH(x.title)}</h4><div class="rs-meta">${tk.map(t=>`<b>${escH(t)}</b>`).join(' · ')}${tk.length&&x.date?' · ':''}${rsDate(x.date)}${x.rating?' · '+escH(x.rating):''}</div>${x.summary?`<div class="rs-sum">${escH(x.summary)}</div>`:''}</div><a class="rs-open" href="${escH(rsSafeUrl(x.url))}" target="_blank" rel="noopener">Read report →</a></div>`;}
 function rsListHTML(list,empty){return list.length?`<div class="rs-list">${list.map(rsItemHTML).join('')}</div>`:`<div class="rs-empty">${empty}</div>`;}
 async function openResearch(){const a=document.getElementById('app');if(a.style.display==='none')showApp();a.classList.remove('keymode','glossmode');_rsScroll=window.scrollY;a.classList.add('resmode');window.scrollTo(0,0);
-  const list=await loadResearch();document.getElementById('rs-all').innerHTML=rsListHTML(list,'No research posted yet. Check back soon.');}
-function closeResearch(){document.getElementById('app').classList.remove('resmode');const q=document.getElementById('rs-q');if(q.value){q.value='';rsFilter('');}window.scrollTo(0,_rsScroll);}
+  const list=await loadResearch();document.getElementById('rs-all').innerHTML=rsListHTML(list,'No uploads yet. Check back soon.');}
+function closeResearch(){document.getElementById('app').classList.remove('resmode');window.scrollTo(0,_rsScroll);}
 function rsFilter(q){q=q.trim().toLowerCase();const list=(CACHE.research||[]).filter(x=>!q||(x.title+' '+rsTickers(x).join(' ')+' '+(x.summary||'')).toLowerCase().includes(q));
-  document.getElementById('rs-all').innerHTML=rsListHTML(list,q?'No research matches that search.':'No research posted yet. Check back soon.');}
+  document.getElementById('rs-all').innerHTML=rsListHTML(list,q?'No research matches that search.':'No uploads yet. Check back soon.');}
 // Research tab on a stock or portfolio: write-ups covering those tickers
 async function renderResearchTab(elId,tickers,label){const el=document.getElementById(elId);if(!el)return;
   const set=new Set(tickers.map(t=>String(t).toUpperCase())),list=(await loadResearch()).filter(x=>rsTickers(x).some(t=>set.has(t)));
