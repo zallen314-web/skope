@@ -195,6 +195,7 @@ canvas{width:100%!important;display:block;}
 .id-bar{background:var(--surface);border-radius:6px;box-shadow:var(--shadow);padding:13px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
 .tk-sym{font-family:inherit;font-size:20px;font-weight:700;color:var(--accent);}
 .tk-co{font-family:inherit;font-size:15px;font-weight:500;}
+.tk-logo{height:26px;width:26px;object-fit:contain;border-radius:5px;background:#fff;}
 .subtabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin:0 0 14px;}.stab{background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;}.stab:hover{color:var(--text);}.stab.on{color:var(--accent);border-bottom-color:var(--accent);}
 .fs-card{border-left:3px solid var(--accent);}.fs-head{font-family:'Source Serif 4',Georgia,serif;font-size:21px;line-height:1.3;color:var(--text);margin:2px 0 3px;}.fs-sub{font-size:11.5px;color:var(--text3);margin-bottom:12px;}.fs-list{margin:0 0 10px 18px;font-size:13.5px;line-height:1.6;color:var(--text2);}.fs-list li{margin-bottom:5px;}.fs-tight{list-style:none;margin-left:0;}.fs-tight li{margin-bottom:6px;}.fs-tight b{color:var(--text);font-weight:600;}.fs-t{font-size:11px;color:var(--text3);white-space:nowrap;}.fs-p{font-size:13.5px;line-height:1.6;color:var(--text2);margin-bottom:8px;}.fs-note{font-size:12px;color:var(--text2);background:var(--surface2);border-radius:4px;padding:7px 11px;margin-bottom:8px;}.fs-foot{font-size:11px;color:var(--text3);margin-top:6px;}
 .px-wrap{margin-left:auto;text-align:right;}.px-now{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;}.px-chg{font-size:13px;font-weight:500;margin-left:4px;}.px-chg.pos{color:var(--green);}.px-chg.neg{color:var(--red);}.px-time{font-size:11px;color:var(--text3);margin-top:1px;}
@@ -14761,6 +14762,14 @@ async function tdJSON(url,label=''){
   throw new Error('Twelve Data kept hitting its per-minute limit. Try again in a minute.');
 }
 
+// ── Twelvedata: company logo (paid plans; hidden if unavailable) ─────────────
+const LOGOS={};
+function logoTag(t){const u=LOGOS[t];return `<img class="tk-logo" id="tk-logo" alt="" ${u?`src="${u}"`:'style="display:none"'} onerror="this.style.display='none'">`;}
+async function loadLogo(t){
+  if(DEMO||LIVE)return; const k=getApiKey(); if(!k)return;
+  if(!(t in LOGOS)){LOGOS[t]='';try{const d=await (await fetch(`https://api.twelvedata.com/logo?symbol=${encodeURIComponent(t)}&apikey=${k}`)).json();LOGOS[t]=(d&&d.status!=='error'&&d.url)?d.url:'';}catch(e){LOGOS[t]='';}}
+  const el=document.getElementById('tk-logo');if(el&&LOGOS[t]&&curInfo&&curInfo.ticker===t){el.src=LOGOS[t];el.style.display='';}
+}
 // ── Twelvedata: price data ────────────────────────────────────────────────────
 async function fetchTwelvedata(ticker, outputsize=504) {
   const apiKey=getApiKey(); if(!apiKey)throw new Error('No API key. Get a free key at twelvedata.com/register');
@@ -15741,9 +15750,9 @@ function priceBlock(f){
   return `<div class="px-wrap"><div class="px-now">${px} ${ch}</div>${when?`<div class="px-time">${when}</div>`:''}</div>`;
 }
 function renderIdBar(info,saved,fund=null){
-  const tm={EQUITY:'Stock',ETF:'ETF','Common Stock':'Stock'};
   document.getElementById('s-tickerBar').style.display='block';
-  document.getElementById('s-tickerBar').innerHTML=`<div class="id-bar"><div><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="tk-sym">${info.ticker}</span><span class="tk-co">${info.name||info.ticker}</span></div><div class="tk-meta">${info.exch?`<span class="mpill ex">${info.exch}</span>`:''}${info.type?`<span class="mpill ty">${tm[info.type]||info.type}</span>`:''}</div></div>${priceBlock(fund)}<div class="id-actions"><button class="sv-btn" onclick="downloadReport()">Download report</button><button class="sv-btn${saved?' saved':''}" id="s-saveBtn" onclick="addToWL(curInfo)">${saved?'✓ Saved':'+ Save to List'}</button></div></div>`;
+  document.getElementById('s-tickerBar').innerHTML=`<div class="id-bar"><div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="tk-sym">${info.exch?`${info.exch}: `:''}${info.ticker}</span>${logoTag(info.ticker)}</div><div class="tk-co" style="margin-top:3px">${info.name||info.ticker}</div></div>${priceBlock(fund)}<div class="id-actions"><button class="sv-btn" onclick="downloadReport()">Download report</button><button class="sv-btn${saved?' saved':''}" id="s-saveBtn" onclick="addToWL(curInfo)">${saved?'✓ Saved':'+ Save to List'}</button></div></div>`;
+  loadLogo(info.ticker);
 }
 
 function renderSingle(ticker,model,result,rawRets,mktRaw,st,annF,proxy,freq){
