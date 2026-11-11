@@ -424,7 +424,7 @@ canvas{width:100%!important;display:block;}
     <div id="single-main">
       <div class="ctrl-row">
         <div class="field"><label>Ticker</label><input type="text" id="s-ticker" placeholder="AAPL, XLE, ORLY..." value="ORLY" style="width:140px"></div>
-        <div class="field"><label>Period</label><select id="s-period"><option value="252">1 Year</option><option value="504">2 Years</option><option value="756">3 Years</option><option value="1260" selected>5 Years</option><option value="2520">10 Years</option><option value="5000">Max (~20 Years)</option></select></div>
+        <div class="field"><label>Period</label><select id="s-period"><option value="756">3 Years</option><option value="1260" selected>5 Years</option><option value="2520">10 Years</option></select></div>
         <div class="field"><label>Model</label>
           <select id="s-model">
             <option value="capm">CAPM</option>
@@ -487,7 +487,7 @@ canvas{width:100%!important;display:block;}
         <label class="bmp-chk"><input type="checkbox" id="bmp-sleeve" checked> Allow cash (BIL) and bonds (AGG)</label>
         <div class="bmp-fine" style="margin:4px 0 12px">No more than 20% in any one stock or ETF.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-          <div class="field"><label>History</label><select id="p-period" style="width:100%"><option value="1260" selected>5 Years</option><option value="2520">10 Years</option><option value="5000">Max (~20 Years)</option></select></div>
+          <div class="field"><label>History</label><select id="p-period" style="width:100%"><option value="756">3 Years</option><option value="1260" selected>5 Years</option><option value="2520">10 Years</option></select></div>
           <div class="field"><label>Benchmark</label><select id="p-bench" style="width:100%"><option value="SPY">S&P 500 (SPY)</option><option value="QQQ">Nasdaq (QQQ)</option><option value="IWM">Russell 2000 (IWM)</option></select></div>
         </div>
         <button class="run-btn" id="bmp-btn" onclick="runBuild()" style="width:100%">Build my portfolio</button>
@@ -522,7 +522,7 @@ canvas{width:100%!important;display:block;}
 <div id="pane-compare" style="display:none">
   <div class="ctrl-row">
     <div class="field"><label>Model</label><select id="c-model"><option value="capm">CAPM</option><option value="ff3" selected>FF 3F</option><option value="ff5">FF 5F</option><option value="ff5mom">FF5+MOM</option><option value="qmj">FF5+QMJ</option><option value="kitchen">Kitchen Sink</option></select></div>
-    <div class="field"><label>Period</label><select id="c-period"><option value="252">1 Year</option><option value="504">2 Years</option><option value="756">3 Years</option><option value="1260" selected>5 Years</option><option value="2520">10 Years</option><option value="5000">Max (~20 Years)</option></select></div>
+    <div class="field"><label>Period</label><select id="c-period"><option value="756">3 Years</option><option value="1260" selected>5 Years</option><option value="2520">10 Years</option></select></div>
     <input type="hidden" id="c-freq" value="monthly">
     <button class="run-btn" id="c-runBtn" onclick="runComparison()">Run Comparison</button>
   </div>
