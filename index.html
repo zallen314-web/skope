@@ -102,6 +102,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,'S
 .bmp-hrow{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.bmp-big{font-size:22px;color:var(--accent);margin-bottom:2px}
 .bmp-acts{display:flex;gap:8px}.bmp-how p{font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:8px}
 .ftbl{width:100%;border-collapse:collapse;}
+.snap-f{margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:4px;}.snap-ft{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;}.snap-eq{font-family:'EB Garamond',Georgia,serif;font-size:16px;margin-top:4px;color:var(--text);}
 .ftbl.snap td,.ftbl.snap th{white-space:nowrap;padding:7px 8px;}.ftbl.snap td:first-child{white-space:normal;min-width:120px;}
 .ftbl th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:var(--text3);border-bottom:2px solid var(--border);background:var(--surface2);}
 .ftbl td{padding:7px 10px;border-bottom:1px solid var(--border2);font-family:inherit;font-size:12px;}
@@ -15967,8 +15968,10 @@ async function runPortfolio(){
 // ── Holdings snapshot (Analyze → Summary) ───────────────────────────────────
 // Close: latest end-of-day price. EPS, margins and EV/EBITDA: SEC filings, trailing twelve months.
 // Margin change: operating margin (net margin for banks) vs the twelve months a year earlier, in points.
-// Implied growth: a reverse DCF. Market cap = FCF × (1+g) / (r − g), solved for g, with r = T-bill
-// rate + beta × the 6% market premium (beta from monthly returns vs the market factor).
+// EPS growth priced in (10 yr): hold for 10 years, earn the required return r (part of it as dividends
+// at yield d), and the P/E ends at the market's 18×. Then P·(1+r−d)^10 = EPS·(1+g)^10·18, so
+// g = (1+r−d)·(P/E ÷ 18)^(1/10) − 1. r = T-bill rate + beta × the 6% market premium.
+const SNAP_EXIT_PE=18;
 async function renderPortSnapshot(weights,outputsize){
   const body=()=>document.getElementById('p-snap-body');
   const tk=[...weights].sort((a,b)=>b.w-a.w);
@@ -15983,8 +15986,8 @@ async function renderPortSnapshot(weights,outputsize){
     const mg=(op,ni,rev)=>rev>0?(op!=null&&!(f&&f.isBank)?op/rev:ni!=null?ni/rev:null):null;
     const m=sec?mg(sec.operatingIncomeTTM,sec.netIncomeTTM,sec.revenueTTM):null,mp=pv?mg(pv.operatingIncomeTTM,pv.netIncomeTTM,pv.revenueTTM):null;
     let g=null,rr=null;
-    if(sec&&f.marketCap&&sec.freeCashFlowTTM>0&&d){const rk=rkRows(d.monthly);if(rk.length>=24){const b=ols(rk.map(x=>x.y),rkCols(rk,1)).betas[0];
-      rr=F.rf+Math.max(0.3,b)*BMP_MKT_PREM;const M=f.marketCap,C=sec.freeCashFlowTTM;g=(rr*M-C)/(M+C);}}
+    if(sec&&f.trailingPE>0&&d){const rk=rkRows(d.monthly);if(rk.length>=24){const b=ols(rk.map(x=>x.y),rkCols(rk,1)).betas[0];
+      rr=F.rf+Math.max(0.3,b)*BMP_MKT_PREM;g=(1+rr-(f.divYield||0))*Math.pow(f.trailingPE/SNAP_EXIT_PE,1/10)-1;}}
     rows.push({t:w.ticker,w:w.w,name:(sec&&sec.name)||f?.name||w.name||w.ticker,etf:!sec,close,ytd,eps:f?.eps??null,epsG:f?.epsGrowth??null,pe:f?.trailingPE??null,
       m,dm:m!=null&&mp!=null?m-mp:null,ev:f?.evToEbitda??null,g,rr,bank:!!f?.isBank});
   }
@@ -15998,12 +16001,15 @@ async function renderPortSnapshot(weights,outputsize){
   const wy=rows.filter(r=>r.ytd!=null),ytdP=wy.length?wy.reduce((s,r)=>s+r.w*r.ytd,0)/wy.reduce((s,r)=>s+r.w,0):null;
   const wp=rows.filter(r=>r.pe>0),peP=wp.length?wp.reduce((s,r)=>s+r.w,0)/wp.reduce((s,r)=>s+r.w/r.pe,0):null;
   const anyEtf=rows.some(r=>r.etf),rset=rows.filter(r=>r.rr!=null);
-  body().innerHTML=`<div style="overflow-x:auto"><table class="ftbl snap"><tr><th>Company</th><th>Ticker</th><th>Weight</th><th>Close</th><th>EPS</th><th>EPS YoY</th><th>P/E</th><th>Margin</th><th>Margin chg</th><th>EV/EBITDA</th><th>Implied growth</th><th>YTD</th></tr>
+  body().innerHTML=`<div style="overflow-x:auto"><table class="ftbl snap"><tr><th>Company</th><th>Ticker</th><th>Weight</th><th>Close</th><th>EPS</th><th>EPS YoY</th><th>P/E</th><th>Margin</th><th>Margin chg</th><th>EV/EBITDA</th><th title="Annual EPS growth over the next 10 years that today's price requires">EPS growth priced in (10 yr)</th><th>YTD</th></tr>
     ${rows.map(r=>`<tr><td>${nm(r)}${r.etf?' <span style="font-size:10px;color:var(--text3)">fund</span>':''}</td><td><b style="color:var(--accent)">${r.t}</b></td><td>${pct(r.w,1)}</td><td>${num(r.close,x=>usd(x))}</td>
       <td>${num(r.eps,x=>(x<0?'−':'')+'$'+Math.abs(x).toFixed(2))}</td><td>${sp(r.epsG)}</td><td>${mult(r.pe)}</td><td>${num(r.m,x=>pct(x,1))}</td><td>${pts(r.dm)}</td><td>${mult(r.ev)}</td><td>${num(r.g,x=>sgnPct(x))}</td><td>${sp(r.ytd)}</td></tr>`).join('')}
     <tr style="font-weight:700"><td>Portfolio</td><td></td><td>100.0%</td><td></td><td></td><td></td><td>${mult(peP)}</td><td></td><td></td><td></td><td></td><td>${sp(ytdP)}</td></tr></table></div>
     <div class="bmp-fine">Ranked by weight. Close is the latest end-of-day price${(()=>{const ds=rows.map(r=>PRICES[r.t]?.d).filter(Boolean).sort();return ds.length?` (${escH(pxDate(ds[ds.length-1]))})`:'';})()}; YTD is from the last close of ${+yr-1}. EPS, P/E and EV/EBITDA use trailing-twelve-month figures from SEC filings. Margin is operating margin (net margin for banks); margin chg is the change from a year earlier.
-    Implied growth is the perpetual free-cash-flow growth rate today's market cap implies (a reverse DCF), discounted at the T-bill rate plus beta × a ${pct(BMP_MKT_PREM,0)} market premium${rset.length?` (${rset.map(r=>`${r.t} ${pct(r.rr,1)}`).slice(0,6).join(', ')}${rset.length>6?', …':''})`:''}; it's blank when free cash flow is negative. Portfolio P/E is the weighted harmonic mean of holdings with positive earnings.${anyEtf?' Funds and ETFs have no SEC company filings, so only price figures are shown.':''}${pxBad.length&&pxBad.length<rows.length?` No end-of-day price for ${escH(pxBad.join(', '))}; the latest quote is used.`:''}</div>`;
+    Portfolio P/E is the weighted harmonic mean of holdings with positive earnings.${anyEtf?' Funds and ETFs have no SEC company filings, so only price figures are shown.':''}${pxBad.length&&pxBad.length<rows.length?` No end-of-day price for ${escH(pxBad.join(', '))}; the latest quote is used.`:''}</div>
+    <div class="snap-f"><div class="snap-ft">EPS growth priced in (10 yr)</div>
+      <div class="snap-eq">g = (1 + r − d) × (P/E ÷ ${SNAP_EXIT_PE})<sup>1/10</sup> − 1</div>
+      <div class="bmp-fine" style="margin-top:4px">The annual EPS growth the current price needs to deliver your required return. Buy at P/E today, hold 10 years and earn r a year, d of it as dividends, so the price must grow at (1 + r − d) a year. If the stock then trades at the market's ${SNAP_EXIT_PE}× earnings, Price × (1 + r − d)<sup>10</sup> = EPS × (1 + g)<sup>10</sup> × ${SNAP_EXIT_PE}. Divide by EPS and solve for g. r = T-bill rate + beta × ${pct(BMP_MKT_PREM,0)} market premium${rset.length?` (${rset.map(r=>`${r.t} ${pct(r.rr,1)}`).slice(0,8).join(', ')}${rset.length>8?', …':''})`:''}. Blank when EPS is negative.</div></div>`;
 }
 
 // Portfolio results are split into tabs, like the Individual page
