@@ -35,12 +35,14 @@ let lastTD = 0; const tdCache = {};
 async function prices(ticker) {
   if (tdCache[ticker]) return tdCache[ticker];
   const key = env('TWELVEDATA_API_KEY');
-  for (let attempt = 0; attempt < 4; attempt++) {
+  // adjust=all: split- and dividend-adjusted, so returns are total returns (plain prices if the plan refuses it)
+  let adj = '&adjust=all';
+  for (let attempt = 0; attempt < 5; attempt++) {
     const wait = lastTD + 8000 - Date.now(); if (wait > 0) await sleep(wait);   // free plan: 8 requests / minute
     lastTD = Date.now();
-    const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(ticker)}&interval=1day&outputsize=1400&order=asc&apikey=${key}`);
+    const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(ticker)}&interval=1day&outputsize=1400&order=asc${adj}&apikey=${key}`);
     const d = await r.json();
-    if (d.status === 'error') { if (d.code === 429) { await sleep(20000); continue; } throw new Error(`${ticker}: ${d.message}`); }
+    if (d.status === 'error') { if (d.code === 429) { await sleep(20000); continue; } if (adj && /adjust/i.test(d.message || '')) { adj = ''; continue; } throw new Error(`${ticker}: ${d.message}`); }
     return (tdCache[ticker] = cleanDaily(d.values || []));
   }
   throw new Error(`${ticker}: rate limited`);

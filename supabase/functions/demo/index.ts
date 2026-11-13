@@ -34,10 +34,10 @@ Deno.serve(async req => {
   if (body && Date.now() - body.at < 30 * 60e3) body = body.body;
   else {
     const td = (path: string) => fetch(`https://api.twelvedata.com/${path}&apikey=${key}`).then(r => r.json());
-    const [series, quote] = await Promise.all([
-      td(`time_series?symbol=${encodeURIComponent(t)}&interval=1day&outputsize=1260&order=ASC`),
-      td(`quote?symbol=${encodeURIComponent(t)}`),
-    ]);
+    // adjust=all: split- and dividend-adjusted, so returns are total returns (plain prices if the plan refuses it)
+    const ts = `time_series?symbol=${encodeURIComponent(t)}&interval=1day&outputsize=1260&order=ASC`;
+    let [series, quote] = await Promise.all([td(ts + '&adjust=all'), td(`quote?symbol=${encodeURIComponent(t)}`)]);
+    if (series.status === 'error' && /adjust/i.test(series.message || '')) series = await td(ts);
     if (series.status === 'error' || !series.values) {
       const busy = /credits|limit/i.test(series.message || '');
       return json({ error: busy ? 'The live example is busy right now. Please try again in a minute.' : `Couldn't find price data for ${t}. Try a US-listed stock or ETF, like AAPL or SPY.` }, busy ? 503 : 404);
