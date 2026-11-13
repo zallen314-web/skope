@@ -217,6 +217,23 @@ canvas{width:100%!important;display:block;}
 .w-input:focus{border-color:var(--accent);}
 .w-rm{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px;border-radius:3px;transition:all 0.1s;}
 .w-rm:hover{background:#f6e9e9;color:var(--red);}
+.pm-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 16px 12px;font-size:11.5px;color:var(--text2);}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;flex-shrink:0;}
+.seg button{background:var(--surface);border:none;padding:5px 11px;font-family:inherit;font-size:11.5px;color:var(--text2);cursor:pointer;}
+.seg button+button{border-left:1px solid var(--border);}
+.seg button.on{background:var(--accent);color:#fff;font-weight:600;}
+.weight-row.sh{grid-template-columns:1fr 68px 92px 24px;}
+.w-val{text-align:right;line-height:1.3;}.w-val b{display:block;font-size:12.5px;font-weight:700;}.w-val span{font-size:10.5px;color:var(--text3);}
+.w-px{color:var(--text2);}
+.money-in{position:relative;}.money-in>span{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none;}.money-in input{padding-left:20px!important;}
+.sh-tot{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:12px;color:var(--text2);margin:10px 0 8px;}.sh-tot b{color:var(--text);text-align:right;}.sh-tot .big{font-size:15px;}
+.px-note{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:10.5px;color:var(--text3);}
+.px-note button{background:none;border:none;color:var(--accent);font-family:inherit;font-size:10.5px;font-weight:600;cursor:pointer;padding:0;}
+.ord-in{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:4px;}
+.ord-in .field input{width:150px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 8px;font-family:inherit;font-size:13px;}
+.ord-sum{display:flex;gap:26px;flex-wrap:wrap;margin:14px 0 12px;padding:12px 14px;background:var(--surface2);border-radius:4px;}
+.ord-k{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.04em;text-transform:uppercase;}.ord-v{font-size:18px;font-weight:700;margin-top:2px;}.ord-v small{font-size:11px;color:var(--text3);font-weight:500;margin-left:4px;}
+.trd-b{color:var(--green);font-weight:600;}.trd-s{color:var(--red);font-weight:600;}
 .w-summary{padding:12px 14px;border-top:1px solid var(--border2);background:var(--surface2);border-radius:0 0 6px 6px;}
 .w-bar-wrap{height:6px;background:var(--border2);border-radius:3px;overflow:hidden;margin:6px 0 8px;}
 .w-bar{height:100%;border-radius:3px;background:var(--green);transition:width 0.2s,background 0.2s;}
@@ -461,14 +478,23 @@ canvas{width:100%!important;display:block;}
   <div class="port-layout">
     <div>
       <div class="port-panel">
-        <div class="port-hdr"><div class="port-title">Step 1 · What you'd hold</div><div class="port-sub">Stocks and ETFs to consider. Current weights are optional.</div></div>
+        <div class="port-hdr"><div class="port-title">Step 1 · What you'd hold</div><div class="port-sub">Stocks and ETFs to consider. Enter weights, or the shares you own to value them at the latest close.</div></div>
+        <div class="pm-row"><span>Enter holdings as</span><div class="seg"><button id="pm-w" onclick="setPortMode('weights')">% weights</button><button id="pm-s" onclick="setPortMode('shares')">Shares I own</button></div></div>
         <div class="pf-row"><select id="pf-select" onchange="pfSelectChanged(this.value)"><option value="">Saved portfolios…</option></select><button class="ghost-btn" onclick="saveNamedPortfolio()">Save</button><button class="ghost-btn pf-del" id="pf-del" style="display:none" onclick="deleteSavedPortfolio(document.getElementById('pf-select').value)">Delete</button></div>
         <div id="weight-rows"><div class="wl-empty">Add tickers below or from Coverage List</div></div>
         <div class="add-row">
           <input class="add-input" id="p-add-input" placeholder="Type ticker..." onkeydown="if(event.key==='Enter')addWeightRow()">
           <button class="add-btn" onclick="addWeightRow()">+ Add</button>
         </div>
-        <div class="w-summary">
+        <div class="w-summary" id="w-sum-shares" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+            <span style="font-size:11px;font-weight:700;color:var(--text2);">Cash in the account</span>
+            <div class="money-in" style="width:120px"><span>$</span><input type="number" class="w-input" id="p-cash" min="0" step="0.01" placeholder="0" oninput="onCashChange(this.value)"></div>
+          </div>
+          <div class="sh-tot" id="sh-tot"></div>
+          <div class="px-note"><span id="px-note">Prices: latest end-of-day close</span><button onclick="refreshPortPrices(true)">Refresh prices</button></div>
+        </div>
+        <div class="w-summary" id="w-sum-weights">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
             <span style="font-size:11px;font-weight:700;color:var(--text2);">Current weights</span>
             <span id="w-total-val" style="font-family:inherit;font-size:14px;font-weight:700">0%</span>
@@ -14535,6 +14561,7 @@ function demoResponse(url){
   const v=demoSeries(),c=v.map(x=>+x.close),last=c[c.length-1],prev=c[c.length-2],yr=c.slice(-252);
   const avg=n=>c.slice(-n).reduce((a,b)=>a+b,0)/n;
   if(q.pathname.includes('time_series')){const n=+q.searchParams.get('outputsize')||504;return{meta:{symbol:DEMO_TICKER,exchange:'Simulated',type:'Common Stock'},values:v.slice(-n),status:'ok'};}
+  if(q.pathname.includes('/eod'))return{symbol:DEMO_TICKER,exchange:'Simulated',currency:'USD',datetime:v[v.length-1].datetime,close:last.toFixed(2)};
   if(q.pathname.includes('quote'))return{symbol:DEMO_TICKER,name:'Demo Industries (simulated)',currency:'USD',close:last.toFixed(2),previous_close:prev.toFixed(2),change:(last-prev).toFixed(2),percent_change:((last/prev-1)*100).toFixed(3),is_market_open:false,datetime:v[v.length-1].datetime,fifty_two_week:{low:Math.min(...yr).toFixed(2),high:Math.max(...yr).toFixed(2)}};
   return{statistics:{valuations_metrics:{trailing_pe:18.2,forward_pe:16.5,peg_ratio:1.4,price_to_sales_ttm:2.1,price_to_book_mrq:3.3,enterprise_to_ebitda:11.2,market_capitalization:4.2e10},
     financials:{profit_margin:0.14,operating_margin:0.19,return_on_equity_ttm:0.22,return_on_assets_ttm:0.09,income_statement:{quarterly_revenue_growth:0.06,quarterly_earnings_growth_yoy:0.09,diluted_eps_ttm:+(last/18.2).toFixed(2)},balance_sheet:{total_debt_to_equity_mrq:55,current_ratio_mrq:1.4}},
@@ -14697,19 +14724,25 @@ function addWeightRow(ticker,name,w){
   if(portfolioRows.find(r=>r.ticker===ticker)){toast(`${ticker} already in portfolio`);return;}
   portfolioRows.push({ticker,name:name||ticker,weight:w||0});
   document.getElementById('p-add-input').value='';
-  savePort();renderWeightRows();updateWeightBar();
+  savePort();renderWeightRows();updateWeightBar();refreshPortPrices();
 }
-function addWeightRowFromWL(t,n){if(portfolioRows.find(r=>r.ticker===t)){toast(`${t} already in portfolio`);return;}portfolioRows.push({ticker:t,name:n,weight:0});savePort();renderWeightRows();updateWeightBar();toast(`${t} added`);}
-function removeWeightRow(t){portfolioRows=portfolioRows.filter(r=>r.ticker!==t);savePort();renderWeightRows();updateWeightBar();}
+function addWeightRowFromWL(t,n){if(portfolioRows.find(r=>r.ticker===t)){toast(`${t} already in portfolio`);return;}portfolioRows.push({ticker:t,name:n,weight:0});savePort();renderWeightRows();updateWeightBar();refreshPortPrices();toast(`${t} added`);}
+function removeWeightRow(t){portfolioRows=portfolioRows.filter(r=>r.ticker!==t);syncWeightsFromShares();savePort();renderWeightRows();updateWeightBar();}
 function onWChange(t,v){const r=portfolioRows.find(r=>r.ticker===t);if(r)r.weight=parseFloat(v)||0;savePort();updateWeightBar();}
 function equalWeight(){if(!portfolioRows.length)return;const w=+(100/portfolioRows.length).toFixed(2);portfolioRows.forEach((r,i)=>r.weight=i===portfolioRows.length-1?+(100-w*(portfolioRows.length-1)).toFixed(2):w);savePort();renderWeightRows();updateWeightBar();}
 function normalizeWeights(){const tot=portfolioRows.reduce((s,r)=>s+r.weight,0);if(!tot){toast('All weights 0');return;}portfolioRows.forEach(r=>r.weight=+((r.weight/tot)*100).toFixed(2));const d=100-portfolioRows.reduce((s,r)=>s+r.weight,0);if(portfolioRows.length)portfolioRows[portfolioRows.length-1].weight=+(portfolioRows[portfolioRows.length-1].weight+d).toFixed(2);savePort();renderWeightRows();updateWeightBar();}
 function renderWeightRows(){
   const el=document.getElementById('weight-rows');
+  syncPortModeUI();
   if(!portfolioRows.length){el.innerHTML=`<div class="wl-empty">Add tickers below or from Coverage List</div>`;return;}
+  if(PORT_MODE==='shares'){
+    el.innerHTML=portfolioRows.map(r=>{const px=PRICES[r.ticker];return`<div class="weight-row sh"><div style="min-width:0"><div class="w-ticker">${r.ticker}</div><div class="w-name" id="wp-${r.ticker}">${pxLine(r)}</div></div><input type="number" class="w-input" value="${r.shares||''}" placeholder="0" title="Shares" min="0" step="any" oninput="onSChange('${r.ticker}',this.value)"><div class="w-val" id="wv-${r.ticker}"></div><button class="w-rm" onclick="removeWeightRow('${r.ticker}')">✕</button></div>`;}).join('');
+    updateShareSummary();return;
+  }
   el.innerHTML=portfolioRows.map(r=>`<div class="weight-row"><div><div class="w-ticker">${r.ticker}</div><div class="w-name">${r.name}</div></div><input type="number" class="w-input" value="${r.weight}" min="0" max="100" step="0.01" onchange="onWChange('${r.ticker}',this.value)" oninput="onWChange('${r.ticker}',this.value)"><button class="w-rm" onclick="removeWeightRow('${r.ticker}')">✕</button></div>`).join('');
 }
 function updateWeightBar(){
+  if(PORT_MODE==='shares'){updateShareSummary();return;}
   const tot=portfolioRows.reduce((s,r)=>s+r.weight,0);
   const v=document.getElementById('w-total-val'),bar=document.getElementById('w-bar');
   v.textContent=tot.toFixed(1)+'%';bar.style.width=Math.min(tot,100)+'%';
@@ -14717,12 +14750,79 @@ function updateWeightBar(){
   bar.className='w-bar'+(ok?'':tot>100?' over':' under');
 }
 
+// ── Shares mode: value holdings at the latest end-of-day close ──────────────
+// Prices come from Twelve Data's /eod endpoint (the most recent completed trading day's close),
+// batched up to 8 symbols per request and kept in this browser for a few hours.
+const PORT_MODE_KEY='skope_port_mode', PORT_CASH_KEY='skope_port_cash', EOD_KEY='skope_eod_v1', BMP_AMT_KEY='skope_bmp_amt';
+let PORT_MODE='weights',PORT_CASH=0,PRICES={},PX_BUSY=false,PX_ERR='',PX_BAD=new Set();
+try{PORT_MODE=localStorage.getItem(PORT_MODE_KEY)==='shares'?'shares':'weights';PORT_CASH=+localStorage.getItem(PORT_CASH_KEY)||0;PRICES=JSON.parse(localStorage.getItem(EOD_KEY)||'{}')||{};}catch(e){}
+const usd=(v,d=2)=>(v<0?'−':'')+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const shFmt=v=>Number.isInteger(v)?v.toLocaleString('en-US'):v.toLocaleString('en-US',{maximumFractionDigits:4});
+const pxDate=d=>{if(!d)return'';const t=new Date(d+'T12:00:00');return t.toLocaleDateString('en-US',{month:'short',day:'numeric'});};
+function pxLine(r){const px=PRICES[r.ticker];return px?`<span class="w-px">${usd(px.c)}</span> · ${escH(pxDate(px.d))} close`:PX_BAD.has(r.ticker)?'<span style="color:var(--red)">No price found</span>':(PX_BUSY?'Getting price…':'No price yet');}
+async function fetchEOD(tickers,force=false){
+  const k=getApiKey();if(!k||LIVE)throw new Error('Add your Twelve Data key to get prices');
+  const fresh=t=>PRICES[t]&&Date.now()-PRICES[t].at<6*3600e3;
+  const need=[...new Set(tickers)].filter(t=>force||!fresh(t)),bad=[];
+  for(let i=0;i<need.length;i+=8){const ch=need.slice(i,i+8);
+    const d=await tdJSON(`https://api.twelvedata.com/eod?symbol=${ch.map(encodeURIComponent).join(',')}&apikey=${k}`,'prices');
+    if(ch.length===1&&d&&d.status==='error'&&!d[ch[0]])throw new Error(String(d.message||'Price request failed').replace(/\*\*/g,''));
+    for(const t of ch){const x=ch.length===1&&!d[t]?d:d[t];
+      if(x&&x.status!=='error'&&parseFloat(x.close)>0)PRICES[t]={c:parseFloat(x.close),d:x.datetime||'',at:Date.now()};else bad.push(t);}}
+  try{localStorage.setItem(EOD_KEY,JSON.stringify(PRICES));}catch(e){}
+  return bad;
+}
+async function refreshPortPrices(force=false){
+  if(PORT_MODE!=='shares'||!portfolioRows.length||PX_BUSY)return;
+  if(LIVE||!getApiKey()){PX_ERR='key';updateShareSummary();return;}
+  PX_BUSY=true;PX_ERR='';portfolioRows.forEach(r=>{const e=document.getElementById('wp-'+r.ticker);if(e&&!PRICES[r.ticker])e.innerHTML='Getting price…';});updateShareSummary();
+  try{const bad=await fetchEOD(portfolioRows.map(r=>r.ticker),force);bad.forEach(t=>PX_BAD.add(t));}
+  catch(e){PX_ERR=e.message;}
+  PX_BUSY=false;portfolioRows.forEach(r=>{const e=document.getElementById('wp-'+r.ticker);if(e)e.innerHTML=pxLine(r);});
+  syncWeightsFromShares();updateShareSummary();
+}
+// Holding weights (for analysis and the build comparison) are each holding's share of the invested amount
+function syncWeightsFromShares(){
+  if(PORT_MODE!=='shares')return;
+  const val=r=>(+r.shares||0)*(PRICES[r.ticker]?.c||0),inv=portfolioRows.reduce((s,r)=>s+val(r),0);
+  portfolioRows.forEach(r=>r.weight=inv>0?+(val(r)/inv*100).toFixed(2):0);
+  if(inv>0){const d=+(100-portfolioRows.reduce((s,r)=>s+r.weight,0)).toFixed(2),big=portfolioRows.reduce((b,r)=>r.weight>b.weight?r:b,portfolioRows[0]);if(d)big.weight=+(big.weight+d).toFixed(2);}
+  savePort();
+}
+function portAccount(){const inv=portfolioRows.reduce((s,r)=>s+(+r.shares||0)*(PRICES[r.ticker]?.c||0),0);return{inv,cash:PORT_CASH,tot:inv+PORT_CASH};}
+function updateShareSummary(){
+  if(PORT_MODE!=='shares')return;
+  const A=portAccount();
+  portfolioRows.forEach(r=>{const el=document.getElementById('wv-'+r.ticker);if(!el)return;const px=PRICES[r.ticker],sh=+r.shares||0;
+    el.innerHTML=!px?`<b style="color:var(--text3)">—</b><span>${sh?'needs price':''}</span>`:sh?`<b>${usd(sh*px.c)}</b><span>${A.tot>0?(sh*px.c/A.tot*100).toFixed(1):'0.0'}% of account</span>`:`<b style="color:var(--text3)">$0</b><span>enter shares</span>`;});
+  const t=document.getElementById('sh-tot');
+  if(t)t.innerHTML=A.tot>0?`<span>Holdings</span><b>${usd(A.inv)} <span style="color:var(--text3);font-weight:500">${(A.inv/A.tot*100).toFixed(1)}%</span></b><span>Cash</span><b>${usd(A.cash)} <span style="color:var(--text3);font-weight:500">${(A.cash/A.tot*100).toFixed(1)}%</span></b><span style="color:var(--text);font-weight:700">Account value</span><b class="big">${usd(A.tot)}</b>`
+    :`<span style="grid-column:1/-1;color:var(--text3)">Enter the shares you own to see what they're worth today.</span>`;
+  const n=document.getElementById('px-note');if(!n)return;
+  const ds=[...new Set(portfolioRows.map(r=>PRICES[r.ticker]?.d).filter(Boolean))].sort(),miss=portfolioRows.filter(r=>!PRICES[r.ticker]&&PX_BAD.has(r.ticker)).map(r=>r.ticker);
+  n.innerHTML=PX_BUSY?'Getting latest closing prices…':PX_ERR==='key'?`<a href="#" onclick="openKeyPage('Add your Twelve Data key to get prices. You only need to do this once.');return false" style="color:var(--accent)">Add your Twelve Data key</a> to get prices`
+    :PX_ERR?`<span style="color:var(--red)">${escH(PX_ERR)}</span>`:miss.length?`<span style="color:var(--red)">No price for ${escH(miss.join(', '))}. Check the ticker.</span>`:ds.length?`Prices: end-of-day close, ${escH(pxDate(ds[ds.length-1]))}`:'Prices: latest end-of-day close';
+}
+function onSChange(t,v){const r=portfolioRows.find(r=>r.ticker===t);if(!r)return;r.shares=Math.max(0,parseFloat(v)||0);syncWeightsFromShares();updateShareSummary();}
+function onCashChange(v){PORT_CASH=Math.max(0,parseFloat(v)||0);try{localStorage.setItem(PORT_CASH_KEY,String(PORT_CASH));}catch(e){}updateShareSummary();}
+function syncPortModeUI(){
+  const sh=PORT_MODE==='shares';
+  document.getElementById('pm-w')?.classList.toggle('on',!sh);document.getElementById('pm-s')?.classList.toggle('on',sh);
+  const a=document.getElementById('w-sum-shares'),b=document.getElementById('w-sum-weights');if(a)a.style.display=sh?'':'none';if(b)b.style.display=sh?'none':'';
+  const c=document.getElementById('p-cash');if(c&&document.activeElement!==c)c.value=PORT_CASH||'';
+}
+function setPortMode(m){
+  PORT_MODE=m==='shares'?'shares':'weights';try{localStorage.setItem(PORT_MODE_KEY,PORT_MODE);}catch(e){}
+  renderWeightRows();updateWeightBar();
+  if(PORT_MODE==='shares'){syncWeightsFromShares();refreshPortPrices();}
+}
+
 // ── UI ────────────────────────────────────────────────────────────────────────
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
 function switchTab(tab){
   ['single','portfolio','compare'].forEach(t=>{document.getElementById(`pane-${t}`).style.display=t===tab?'block':'none';document.getElementById(`tab-${t}`).className='tab'+(t===tab?' active':'');});
   if(tab==='compare')renderChips();
-  if(tab==='portfolio'){renderPortWL();renderWeightRows();updateWeightBar();renderBmpQ();}
+  if(tab==='portfolio'){renderPortWL();renderWeightRows();updateWeightBar();renderBmpQ();refreshPortPrices();}
 }
 function setS(id,msg,st='active'){document.getElementById(`${id}-dot`).className='sdot '+st;document.getElementById(`${id}-status`).textContent=msg;}
 function upP(id,st,msg){const el=document.getElementById('prog-'+id);if(!el)return;el.querySelector('.dot').className='dot '+st;el.querySelector('.label').textContent=msg;}
@@ -15253,7 +15353,7 @@ function saveNamedPortfolio(){
   const cur=document.getElementById('pf-select').value;
   const name=(prompt('Name this portfolio',cur||'My portfolio')||'').trim().slice(0,60);if(!name)return;
   const l=loadPFs().filter(p=>p.name!==name);
-  l.unshift({name,rows:portfolioRows.map(r=>({ticker:r.ticker,name:r.name||r.ticker,weight:+r.weight})),bench:document.getElementById('p-bench').value,updated:new Date().toISOString()});
+  l.unshift({name,rows:portfolioRows.map(r=>({ticker:r.ticker,name:r.name||r.ticker,weight:+r.weight,...(PORT_MODE==='shares'?{shares:+r.shares||0}:{})})),bench:document.getElementById('p-bench').value,...(PORT_MODE==='shares'?{mode:'shares',cash:PORT_CASH}:{}),updated:new Date().toISOString()});
   savePFs(l);
   // clean slate for the next portfolio (the saved one is in the dropdown)
   portfolioRows=[];savePort();renderWeightRows();updateWeightBar();
@@ -15263,7 +15363,8 @@ function saveNamedPortfolio(){
   toast(USER?`✓ Saved "${name}" to your account`:`✓ Saved "${name}" in this browser. Sign in to keep it on every device.`);
 }
 function loadSavedPortfolio(name){const p=loadPFs().find(x=>x.name===name);if(!p)return;
-  portfolioRows=p.rows.map(r=>({...r}));savePort();renderWeightRows();updateWeightBar();
+  portfolioRows=p.rows.map(r=>({...r}));savePort();
+  if(p.mode==='shares'){PORT_CASH=+p.cash||0;try{localStorage.setItem(PORT_CASH_KEY,String(PORT_CASH));}catch(e){}setPortMode('shares');}else setPortMode('weights');
   if(p.bench)document.getElementById('p-bench').value=p.bench;
   try{showApp();switchTab('portfolio');}catch(e){}const s=document.getElementById('pf-select');if(s){s.value=name;document.getElementById('pf-del').style.display='';}toast(`Loaded "${name}". Build model weights or analyze it.`);}
 function pfSelectChanged(v){document.getElementById('pf-del').style.display=v?'':'none';if(v)loadSavedPortfolio(v);}
@@ -16109,6 +16210,14 @@ function renderBuild(){
     ${note?`<div class="warn" style="margin-top:10px">${note}</div>`:''}
     ${B.skipped.length?`<div class="warn" style="margin-top:10px">Left out: ${escH(B.skipped.join('; '))}.</div>`:''}
   </div>
+  <div class="card" id="bmp-order"><div class="card-title">Turn it into shares</div>
+    <p class="bmp-ps" style="margin:-2px 0 12px">How many shares of each to buy at the latest closing prices, and how much cash is left over.</p>
+    <div class="ord-in">
+      <div class="field"><label>Amount to invest</label><div class="money-in"><span>$</span><input type="number" id="bmp-amt" min="0" step="100" value="${bmpDefaultAmt()}" oninput="bmpAmtChanged(this.value)"></div></div>
+      <label class="bmp-chk" style="margin-bottom:8px"><input type="checkbox" id="bmp-frac" onchange="renderOrder()"> Fractional shares</label>
+    </div>
+    <div id="bmp-order-out"><div class="bmp-fine">Getting prices…</div></div>
+  </div>
   <div class="two-col">
     <div class="card"><div class="card-title">Expected, per year</div>
       <table class="ftbl"><tr><th></th>${cur?'<th>Current</th>':''}<th>Model</th>${bst?`<th>${bench}</th>`:''}</tr>
@@ -16133,7 +16242,59 @@ function renderBuild(){
     <p><b>Optimization.</b> The highest expected return at your target volatility. Long only, at most 20% per holding, fully invested.</p>
     <p class="bmp-fine">These are model weights from the assumptions above, not a recommendation. Expected returns are estimates and can be badly wrong. Skope is for informational and educational purposes only and is not investment advice.</p>
   </div></div>`;
-  drawBmpFront();
+  drawBmpFront();loadOrderPrices();
+}
+// ── Model weights → share counts at the latest close ─────────────────────────
+// Whole shares: round each target down, then spend leftover cash one share at a time on whichever
+// holding is furthest below its target (only when buying it moves that holding closer to target).
+function bmpDefaultAmt(){const A=PORT_MODE==='shares'?portAccount():null;if(A&&A.tot>0)return Math.round(A.tot*100)/100;let v=0;try{v=+localStorage.getItem(BMP_AMT_KEY)||0;}catch(e){}return v>0?v:30000;}
+let _ordT=null;
+function bmpAmtChanged(v){try{localStorage.setItem(BMP_AMT_KEY,String(+v||0));}catch(e){}clearTimeout(_ordT);_ordT=setTimeout(renderOrder,150);}
+async function loadOrderPrices(){
+  const B=window.LAST_BUILD;if(!B)return;const tk=B.assets.filter((a,i)=>B.w[i]>0.0005||curShares()[a.ticker]).map(a=>a.ticker);
+  B.pxErr='';try{const bad=await fetchEOD(tk);if(bad.length)B.pxErr=`No closing price for ${bad.join(', ')}; those are left as cash.`;}catch(e){B.pxErr=e.message;}
+  renderOrder();
+}
+function curShares(){const m={};if(PORT_MODE==='shares')portfolioRows.forEach(r=>{if(+r.shares>0)m[r.ticker]=+r.shares;});return m;}
+function bmpAllocate(amt,items,frac){
+  const sh=items.map(it=>{if(!it.p)return 0;const x=it.w*amt/it.p;return frac?Math.floor(x*1e4)/1e4:Math.floor(x+1e-9);});
+  let left=amt-items.reduce((s,it,i)=>s+sh[i]*(it.p||0),0);
+  if(!frac){for(let g=0;g<10000;g++){let best=-1,bd=0;
+    items.forEach((it,i)=>{if(!it.p||it.w<=0||it.p>left+1e-9)return;const def=it.w*amt-sh[i]*it.p;if(it.p<2*def&&def>bd){bd=def;best=i;}});
+    if(best<0)break;sh[best]++;left-=items[best].p;}}
+  return{sh,left:Math.max(0,Math.round(left*100)/100)};
+}
+function renderOrder(){
+  const B=window.LAST_BUILD,el=document.getElementById('bmp-order-out');if(!B||!el)return;
+  const amt=Math.max(0,parseFloat(document.getElementById('bmp-amt')?.value)||0),frac=!!document.getElementById('bmp-frac')?.checked,cs=curShares(),hasCur=Object.keys(cs).length>0;
+  const items=B.assets.map((a,i)=>({a,w:B.w[i],p:PRICES[a.ticker]?.c||0,d:PRICES[a.ticker]?.d||''})).filter(it=>it.w>0.0005||cs[it.a.ticker]);
+  if(!items.some(it=>it.p)){el.innerHTML=B.pxErr?`<div class="warn">${escH(B.pxErr)}</div>`:'<div class="bmp-fine">Getting prices…</div>';return;}
+  if(!amt){el.innerHTML='<div class="bmp-fine">Enter an amount to invest.</div>';return;}
+  const{sh,left}=bmpAllocate(amt,items,frac),cost=items.map((it,i)=>sh[i]*it.p),inv=cost.reduce((s,v)=>s+v,0);
+  B.order={items,sh,left,amt};
+  const ord=items.map((_,i)=>i).sort((i,j)=>items[j].w-items[i].w);
+  const ds=[...new Set(items.map(it=>it.d).filter(Boolean))].sort(),asOf=ds.length?pxDate(ds[ds.length-1]):'';
+  const trade=i=>{const t=items[i].a.ticker,d=+(sh[i]-(cs[t]||0)).toFixed(4);return Math.abs(d)<1e-4?'<span style="color:var(--text3)">Hold</span>':d>0?`<span class="trd-b">Buy ${shFmt(d)}</span>`:`<span class="trd-s">Sell ${shFmt(-d)}${sh[i]===0?' (all)':''}</span>`;};
+  const usesBil=items.some((it,i)=>it.a.ticker===BMP_CASH&&sh[i]>0);
+  el.innerHTML=`<div class="ord-sum"><div><div class="ord-k">Invested</div><div class="ord-v">${usd(inv)}<small>${(inv/amt*100).toFixed(1)}%</small></div></div>
+    <div><div class="ord-k">Cash left over</div><div class="ord-v">${usd(left)}<small>${(left/amt*100).toFixed(1)}%</small></div></div>
+    <div><div class="ord-k">Positions</div><div class="ord-v">${sh.filter(x=>x>0).length}</div></div></div>
+    ${B.pxErr?`<div class="warn">${escH(B.pxErr)}</div>`:''}
+    <div style="overflow-x:auto"><table class="ftbl"><tr><th>Holding</th><th>Target</th><th>Last close</th><th>Shares</th><th>Cost</th><th>Actual weight</th>${hasCur?'<th>You own</th><th>Trade</th>':''}</tr>
+    ${ord.map(i=>{const it=items[i];return`<tr${sh[i]===0&&!cs[it.a.ticker]?' style="opacity:.55"':''}><td><b style="color:var(--accent)">${it.a.ticker}</b></td><td>${pct(it.w,1)}</td><td>${it.p?usd(it.p):'—'}</td><td><b>${shFmt(sh[i])}</b></td><td>${usd(cost[i])}</td><td>${pct(cost[i]/amt,1)}</td>${hasCur?`<td>${shFmt(cs[it.a.ticker]||0)}</td><td>${trade(i)}</td>`:''}</tr>`;}).join('')}
+    <tr><td><b>Cash</b></td><td>—</td><td>—</td><td>—</td><td>${usd(left)}</td><td>${pct(left/amt,1)}</td>${hasCur?'<td></td><td></td>':''}</tr></table></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <div class="bmp-fine" style="margin:0;flex:1;min-width:220px">End-of-day closing prices${asOf?` from ${escH(asOf)}`:''}; what you pay at the open will differ.${frac?'':' Whole shares only: each target is rounded down, then leftover cash buys extra shares of whatever is furthest below target.'}${usesBil?` ${BMP_CASH} is a T-bill ETF; you can hold that slice as plain cash instead.`:''}${hasCur?' Trades compare against the shares in Step 1.':''}</div>
+      <button class="ghost-btn" onclick="bmpUseShares()">Use these shares in Step 1</button></div>`;
+}
+function bmpUseShares(){
+  const B=window.LAST_BUILD;if(!B||!B.order)return;const{items,sh,left}=B.order,keep=new Map(portfolioRows.map(r=>[r.ticker,r]));
+  portfolioRows=items.map((it,i)=>({ticker:it.a.ticker,name:keep.get(it.a.ticker)?.name||(it.a.kind==='cash'?'Cash (T-bill ETF)':it.a.kind==='bond'?'US aggregate bonds':it.a.name||it.a.ticker),shares:sh[i],weight:0})).filter(r=>r.shares>0).sort((a,b)=>b.shares*(PRICES[b.ticker]?.c||0)-a.shares*(PRICES[a.ticker]?.c||0));
+  PORT_CASH=left;try{localStorage.setItem(PORT_CASH_KEY,String(left));}catch(e){}
+  PORT_MODE='shares';try{localStorage.setItem(PORT_MODE_KEY,'shares');}catch(e){}
+  syncWeightsFromShares();renderWeightRows();updateWeightBar();
+  document.getElementById('weight-rows')?.scrollIntoView({behavior:'smooth',block:'center'});
+  toast('Shares and leftover cash copied to Step 1. Save them as a portfolio to keep them.');
 }
 function drawBmpFront(){
   const B=window.LAST_BUILD,el=document.getElementById('bmp-front');if(!B||!el||typeof Chart==='undefined')return;
@@ -16156,6 +16317,7 @@ function bmpUse(analyze){
   portfolioRows=B.assets.map((a,i)=>({ticker:a.ticker,name:keep.get(a.ticker)?.name||(a.kind==='cash'?'Cash (T-bill ETF)':a.kind==='bond'?'US aggregate bonds':a.name||a.ticker),weight:+(B.w[i]*100).toFixed(1)}))
     .sort((a,b)=>b.weight-a.weight);
   for(const r of keep.values())if(!portfolioRows.some(x=>x.ticker===r.ticker))portfolioRows.push({...r,weight:0});
+  if(PORT_MODE==='shares'){PORT_MODE='weights';try{localStorage.setItem(PORT_MODE_KEY,'weights');}catch(e){}}
   savePort();renderWeightRows();updateWeightBar();
   if(analyze){runPortfolio();window.scrollTo({top:0,behavior:'smooth'});}else toast('Model weights copied to Step 1. Save them as a portfolio to keep them.');
 }
