@@ -223,7 +223,7 @@ canvas{width:100%!important;display:block;}
 .seg button{background:var(--surface);border:none;padding:5px 11px;font-family:inherit;font-size:11.5px;color:var(--text2);cursor:pointer;}
 .seg button+button{border-left:1px solid var(--border);}
 .seg button.on{background:var(--accent);color:#fff;font-weight:600;}
-.weight-row.sh{grid-template-columns:1fr 68px 92px 24px;}
+.weight-row.sh,.weight-row.wd{grid-template-columns:1fr 64px 100px 24px;}
 .w-val{text-align:right;line-height:1.3;}.w-val b{display:block;font-size:12.5px;font-weight:700;}.w-val span{font-size:10.5px;color:var(--text3);}
 .w-px{color:var(--text2);}
 .money-in{position:relative;}.money-in>span{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none;}.money-in input{padding-left:20px!important;}
@@ -477,9 +477,13 @@ canvas{width:100%!important;display:block;}
 <div id="pane-portfolio" style="display:none">
   <div class="port-layout">
     <div>
+      <div class="card" style="margin-bottom:14px"><div class="card-title">Step 1 · How much are you investing?</div>
+        <div id="inv-wrap"><div class="money-in"><span>$</span><input type="number" class="api-input" id="inv-amt" min="0" step="100" placeholder="30000" style="width:100%;background:#fff;font-size:15px" oninput="onInvAmt(this.value)"></div></div>
+        <div id="inv-sh" class="bmp-fine" style="display:none;margin-top:0">You're entering shares you already own, so the amount is their value at the latest close plus your cash.</div>
+      </div>
       <div class="port-panel">
-        <div class="port-hdr"><div class="port-title">Step 1 · What you'd hold</div><div class="port-sub">Stocks and ETFs to consider. Enter weights, or the shares you own to value them at the latest close.</div></div>
-        <div class="pm-row"><span>Enter holdings as</span><div class="seg"><button id="pm-w" onclick="setPortMode('weights')">% weights</button><button id="pm-s" onclick="setPortMode('shares')">Shares I own</button></div></div>
+        <div class="port-hdr"><div class="port-title">Step 2 · Add stocks</div><div class="port-sub">Set a weight for each and see the dollars and shares it buys at the latest close.</div></div>
+        <div class="pm-row"><span>Enter as</span><div class="seg"><button id="pm-w" onclick="setPortMode('weights')">% weights</button><button id="pm-s" onclick="setPortMode('shares')">Shares I own</button></div></div>
         <div class="pf-row"><select id="pf-select" onchange="pfSelectChanged(this.value)"><option value="">Saved portfolios…</option></select><button class="ghost-btn" onclick="saveNamedPortfolio()">Save</button><button class="ghost-btn pf-del" id="pf-del" style="display:none" onclick="deleteSavedPortfolio(document.getElementById('pf-select').value)">Delete</button></div>
         <div id="weight-rows"><div class="wl-empty">Add tickers below or from Coverage List</div></div>
         <div class="add-row">
@@ -500,18 +504,15 @@ canvas{width:100%!important;display:block;}
             <span id="w-total-val" style="font-family:inherit;font-size:14px;font-weight:700">0%</span>
           </div>
           <div class="w-bar-wrap"><div class="w-bar" id="w-bar" style="width:0%"></div></div>
+          <div class="sh-tot" id="w-alloc" style="display:none"></div>
           <div style="display:flex;gap:8px">
             <button class="ghost-btn" onclick="equalWeight()" style="flex:1">Equal weight</button>
             <button class="ghost-btn" onclick="normalizeWeights()" style="flex:1">Normalize</button>
           </div>
         </div>
       </div>
-      <div class="card" style="margin-top:14px"><div class="card-title">Step 2 · Invest an amount</div>
-        <p class="bmp-fine" style="margin:0 0 10px">Shares to buy of each holding at the latest close, using the weights in Step 1.</p>
-        <div style="display:flex;gap:8px;align-items:center"><div class="money-in" style="flex:1"><span>$</span><input type="number" class="api-input" id="sz-amt" min="0" step="100" style="width:100%;background:#fff" onkeydown="if(event.key==='Enter')runSizing()"></div><button class="run-btn" id="sz-btn" onclick="runSizing()" style="white-space:nowrap">Calculate shares</button></div>
-      </div>
-      <div class="card" style="margin-top:14px"><div class="card-title">Analyze a portfolio</div>
-        <p class="bmp-fine" style="margin-bottom:10px">Full performance, factor and risk analysis of the weights in Step 1.</p>
+      <div class="card" style="margin-top:14px"><div class="card-title">Step 3 · Analyze</div>
+        <p class="bmp-fine" style="margin-bottom:10px">Full performance, factor and risk analysis of the weights in Step 2.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div class="field"><label>History</label><select id="p-period" style="width:100%"><option value="756">3 Years</option><option value="1260" selected>5 Years</option><option value="2520">10 Years</option></select></div>
           <div class="field"><label>Benchmark</label><select id="p-bench" style="width:100%"><option value="SPY">S&P 500 (SPY)</option><option value="QQQ">Nasdaq (QQQ)</option><option value="IWM">Russell 2000 (IWM)</option></select></div>
@@ -526,7 +527,7 @@ canvas{width:100%!important;display:block;}
         <div id="p-wl-list"><div class="wl-empty">No tickers saved yet.</div></div>
       </div>
     </div>
-    <div id="p-output"><div class="empty">Add your holdings on the left<br><div class="small">Value them at the latest close · Size an investment · Analyze</div></div></div>
+    <div id="p-output"><div class="empty">Start on the left<br><div class="small">Enter an amount · Add stocks · Analyze</div></div></div>
   </div>
 </div>
 
@@ -14725,10 +14726,33 @@ function renderWeightRows(){
     el.innerHTML=portfolioRows.map(r=>{const px=PRICES[r.ticker];return`<div class="weight-row sh"><div style="min-width:0"><div class="w-ticker">${r.ticker}</div><div class="w-name" id="wp-${r.ticker}">${pxLine(r)}</div></div><input type="number" class="w-input" value="${r.shares||''}" placeholder="0" title="Shares" min="0" step="1" oninput="onSChange('${r.ticker}',this.value)"><div class="w-val" id="wv-${r.ticker}"></div><button class="w-rm" onclick="removeWeightRow('${r.ticker}')">✕</button></div>`;}).join('');
     updateShareSummary();return;
   }
-  el.innerHTML=portfolioRows.map(r=>`<div class="weight-row"><div><div class="w-ticker">${r.ticker}</div><div class="w-name">${r.name}</div></div><input type="number" class="w-input" value="${r.weight}" min="0" max="100" step="0.01" onchange="onWChange('${r.ticker}',this.value)" oninput="onWChange('${r.ticker}',this.value)"><button class="w-rm" onclick="removeWeightRow('${r.ticker}')">✕</button></div>`).join('');
+  el.innerHTML=portfolioRows.map(r=>`<div class="weight-row wd"><div style="min-width:0"><div class="w-ticker">${r.ticker}</div><div class="w-name" id="wp-${r.ticker}">${PRICES[r.ticker]||PX_BUSY||PX_BAD.has(r.ticker)?pxLine(r):escH(r.name||'')}</div></div><input type="number" class="w-input" value="${r.weight||''}" placeholder="%" min="0" max="100" step="0.01" oninput="onWChange('${r.ticker}',this.value)"><div class="w-val" id="wv-${r.ticker}"></div><button class="w-rm" onclick="removeWeightRow('${r.ticker}')">✕</button></div>`).join('');
+  updateWeightAlloc();
 }
+// Weights mode: dollars and whole shares each weight buys from the Step 1 amount
+function updateWeightAlloc(){
+  if(PORT_MODE==='shares')return;
+  const amt=INV_AMT,tot=portfolioRows.reduce((s,r)=>s+(+r.weight||0),0);
+  const items=portfolioRows.map(r=>({a:{ticker:r.ticker},w:(+r.weight||0)/100,p:PRICES[r.ticker]?.c||0}));
+  const ok=amt>0&&tot<=100.5,al=ok?bmpAllocate(amt,items,false):null;
+  portfolioRows.forEach((r,i)=>{const el=document.getElementById('wv-'+r.ticker);if(!el)return;const p=items[i].p;
+    el.innerHTML=!p?`<b style="color:var(--text3)">—</b><span>${PX_BAD.has(r.ticker)?'no price':''}</span>`
+      :!al?`<b style="color:var(--text3)">${usd(p)}</b><span>per share</span>`
+      :`<b>${usd(al.sh[i]*p,0)}</b><span>${al.sh[i].toLocaleString('en-US')} sh</span>`;});
+  const box=document.getElementById('w-alloc');if(!box)return;
+  if(!amt||!portfolioRows.length){box.style.display='none';return;}
+  box.style.display='';
+  if(!al){box.innerHTML=`<span style="grid-column:1/-1;color:var(--red)">Weights add to more than 100%.</span>`;return;}
+  const inv=al.sh.reduce((s,n,i)=>s+n*items[i].p,0),left=amt-inv;
+  const ds=[...new Set(portfolioRows.map(r=>PRICES[r.ticker]?.d).filter(Boolean))].sort();
+  box.innerHTML=`<span>Invested</span><b>${usd(inv)} <span style="color:var(--text3);font-weight:500">${(inv/amt*100).toFixed(1)}%</span></b><span>Cash left</span><b>${usd(left)} <span style="color:var(--text3);font-weight:500">${(left/amt*100).toFixed(1)}%</span></b>
+    <span style="grid-column:1/-1;font-size:10.5px;color:var(--text3);display:flex;justify-content:space-between;gap:8px;margin-top:2px"><span>${PX_BUSY?'Getting prices…':ds.length?`Whole shares at the ${escH(pxDate(ds[ds.length-1]))} close`:'Whole shares at the latest close'}</span><a href="#" onclick="runSizing();return false" style="color:var(--accent);font-weight:600">Order table →</a></span>`;
+}
+let INV_AMT=0;try{INV_AMT=+localStorage.getItem('skope_bmp_amt')||0;}catch(e){}
+function onInvAmt(v){INV_AMT=Math.max(0,parseFloat(v)||0);try{localStorage.setItem('skope_bmp_amt',String(INV_AMT));}catch(e){}updateWeightAlloc();}
 function updateWeightBar(){
   if(PORT_MODE==='shares'){updateShareSummary();return;}
+  updateWeightAlloc();
   const tot=portfolioRows.reduce((s,r)=>s+r.weight,0);
   const v=document.getElementById('w-total-val'),bar=document.getElementById('w-bar');
   v.textContent=tot.toFixed(1)+'%';bar.style.width=Math.min(tot,100)+'%';
@@ -14745,7 +14769,7 @@ try{PORT_MODE=localStorage.getItem(PORT_MODE_KEY)==='shares'?'shares':'weights';
 const usd=(v,d=2)=>(v<0?'−':'')+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const shFmt=v=>Number.isInteger(v)?v.toLocaleString('en-US'):v.toLocaleString('en-US',{maximumFractionDigits:4});
 const pxDate=d=>{if(!d)return'';const t=new Date(d+'T12:00:00');return t.toLocaleDateString('en-US',{month:'short',day:'numeric'});};
-function pxLine(r){const px=PRICES[r.ticker];return px?`<span class="w-px">${usd(px.c)}</span> · ${escH(pxDate(px.d))} close`:PX_BAD.has(r.ticker)?'<span style="color:var(--red)">No price found</span>':(PX_BUSY?'Getting price…':'No price yet');}
+function pxLine(r){const px=PRICES[r.ticker];return px?`<span class="w-px">${usd(px.c)}</span> a share`:PX_BAD.has(r.ticker)?'<span style="color:var(--red)">No price found</span>':(PX_BUSY?'Getting price…':'No price yet');}
 async function fetchEOD(tickers,force=false){
   const k=getApiKey();if(!k||LIVE)throw new Error('Add your Twelve Data key to get prices');
   const fresh=t=>PRICES[t]&&Date.now()-PRICES[t].at<6*3600e3;
@@ -14759,13 +14783,13 @@ async function fetchEOD(tickers,force=false){
   return bad;
 }
 async function refreshPortPrices(force=false){
-  if(PORT_MODE!=='shares'||!portfolioRows.length||PX_BUSY)return;
+  if(!portfolioRows.length||PX_BUSY)return;
   if(LIVE||!getApiKey()){PX_ERR='key';updateShareSummary();return;}
   PX_BUSY=true;PX_ERR='';portfolioRows.forEach(r=>{const e=document.getElementById('wp-'+r.ticker);if(e&&!PRICES[r.ticker])e.innerHTML='Getting price…';});updateShareSummary();
   try{const bad=await fetchEOD(portfolioRows.map(r=>r.ticker),force);bad.forEach(t=>PX_BAD.add(t));}
   catch(e){PX_ERR=e.message;}
   PX_BUSY=false;portfolioRows.forEach(r=>{const e=document.getElementById('wp-'+r.ticker);if(e)e.innerHTML=pxLine(r);});
-  syncWeightsFromShares();updateShareSummary();
+  syncWeightsFromShares();updateShareSummary();updateWeightAlloc();
 }
 // Holding weights (for analysis and the build comparison) are each holding's share of the invested amount
 function syncWeightsFromShares(){
@@ -14796,11 +14820,12 @@ function syncPortModeUI(){
   document.getElementById('pm-w')?.classList.toggle('on',!sh);document.getElementById('pm-s')?.classList.toggle('on',sh);
   const a=document.getElementById('w-sum-shares'),b=document.getElementById('w-sum-weights');if(a)a.style.display=sh?'':'none';if(b)b.style.display=sh?'none':'';
   const c=document.getElementById('p-cash');if(c&&document.activeElement!==c)c.value=PORT_CASH||'';
+  const iw=document.getElementById('inv-wrap'),is=document.getElementById('inv-sh'),ia=document.getElementById('inv-amt');if(iw)iw.style.display=sh?'none':'';if(is)is.style.display=sh?'':'none';if(ia&&document.activeElement!==ia)ia.value=INV_AMT||'';
 }
 function setPortMode(m){
   PORT_MODE=m==='shares'?'shares':'weights';try{localStorage.setItem(PORT_MODE_KEY,PORT_MODE);}catch(e){}
   renderWeightRows();updateWeightBar();
-  if(PORT_MODE==='shares'){syncWeightsFromShares();refreshPortPrices();}
+  if(PORT_MODE==='shares')syncWeightsFromShares();refreshPortPrices();
 }
 
 // ── UI ────────────────────────────────────────────────────────────────────────
@@ -15315,7 +15340,7 @@ function saveNamedPortfolio(){
   // clean slate for the next portfolio (the saved one is in the dropdown)
   portfolioRows=[];savePort();renderWeightRows();updateWeightBar();
   document.getElementById('pf-select').value='';document.getElementById('pf-del').style.display='none';
-  document.getElementById('p-output').innerHTML='<div class="empty">Add your holdings on the left<br><div class="small">Value them at the latest close · Size an investment · Analyze</div></div>';
+  document.getElementById('p-output').innerHTML='<div class="empty">Start on the left<br><div class="small">Enter an amount · Add stocks · Analyze</div></div>';
   window.LAST_PORT=null;
   toast(USER?`✓ Saved "${name}" to your account`:`✓ Saved "${name}" in this browser. Sign in to keep it on every device.`);
 }
@@ -16067,15 +16092,15 @@ function bmpFactors(){
 // ── Invest an amount: Step 1 weights → share counts at the latest close ─────
 async function runSizing(){
   const rows=portfolioRows.filter(r=>+r.weight>0),tot=rows.reduce((s,r)=>s+(+r.weight),0);
-  if(!rows.length){toast(PORT_MODE==='shares'?'Enter your shares in Step 1 first':'Add holdings and weights in Step 1 first');return;}
-  if(Math.abs(tot-100)>0.5){toast(`Weights add to ${tot.toFixed(1)}%. Make them 100% first (Normalize helps).`);return;}
+  if(!rows.length){toast(PORT_MODE==='shares'?'Enter your shares in Step 2 first':'Add stocks and weights in Step 2 first');return;}
+  if(tot>100.5){toast(`Weights add to ${tot.toFixed(1)}%. Bring them to 100% or less.`);return;}
   if(LIVE||!getApiKey()){openKeyPage(LIVE?LIVE_MORE:'Add your Twelve Data key to get prices. You only need to do this once.');return;}
-  const amt=+document.getElementById('sz-amt').value||bmpDefaultAmt();document.getElementById('sz-amt').value=amt;
-  try{localStorage.setItem(BMP_AMT_KEY,String(amt));}catch(e){}
+  const amt=PORT_MODE==='shares'?bmpDefaultAmt():INV_AMT;
+  if(!amt){toast('Enter how much you are investing in Step 1');document.getElementById('inv-amt')?.focus();return;}
   window.LAST_BUILD={assets:rows.map(r=>({ticker:r.ticker,name:r.name,kind:'risky'})),w:rows.map(r=>+r.weight/100)};
   document.getElementById('p-output').innerHTML=`<div class="card" id="bmp-order"><div class="card-title">Invest an amount</div>
     <p class="bmp-ps" style="margin:-2px 0 12px">How many shares of each to buy at the latest closing prices, and how much cash is left over.</p>
-    <div class="ord-in"><div class="field"><label>Amount to invest</label><div class="money-in"><span>$</span><input type="number" id="bmp-amt" min="0" step="100" value="${amt}" oninput="bmpAmtChanged(this.value);document.getElementById('sz-amt').value=this.value"></div></div></div>
+    <div class="ord-in"><div class="field"><label>Amount to invest</label><div class="money-in"><span>$</span><input type="number" id="bmp-amt" min="0" step="100" value="${amt}" oninput="bmpAmtChanged(this.value);if(PORT_MODE!=='shares'){INV_AMT=+this.value||0;const a=document.getElementById('inv-amt');if(a)a.value=this.value;updateWeightAlloc();}"></div></div></div>
     <div id="bmp-order-out"><div class="bmp-fine">Getting prices…</div></div></div>`;
   loadOrderPrices();
 }
@@ -16117,8 +16142,8 @@ function renderOrder(){
     ${ord.map(i=>{const it=items[i];return`<tr${sh[i]===0&&!cs[it.a.ticker]?' style="opacity:.55"':''}><td><b style="color:var(--accent)">${it.a.ticker}</b></td><td>${pct(it.w,1)}</td><td>${it.p?usd(it.p):'—'}</td><td><b>${shFmt(sh[i])}</b></td><td>${usd(cost[i])}</td><td>${pct(cost[i]/amt,1)}</td>${hasCur?`<td>${shFmt(cs[it.a.ticker]||0)}</td><td>${trade(i)}</td>`:''}</tr>`;}).join('')}
     <tr><td><b>Cash</b></td><td>—</td><td>—</td><td>—</td><td>${usd(left)}</td><td>${pct(left/amt,1)}</td>${hasCur?'<td></td><td></td>':''}</tr></table></div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">
-      <div class="bmp-fine" style="margin:0;flex:1;min-width:220px">End-of-day closing prices${asOf?` from ${escH(asOf)}`:''}; what you pay at the open will differ. Whole shares only: each target is rounded down, then leftover cash buys extra shares of whatever is furthest below target.${hasCur?' Trades compare against the shares in Step 1.':''}</div>
-      <button class="ghost-btn" onclick="bmpUseShares()">Use these shares in Step 1</button></div>`;
+      <div class="bmp-fine" style="margin:0;flex:1;min-width:220px">End-of-day closing prices${asOf?` from ${escH(asOf)}`:''}; what you pay at the open will differ. Whole shares only: each target is rounded down, then leftover cash buys extra shares of whatever is furthest below target.${hasCur?' Trades compare against the shares in Step 2.':''}</div>
+      <button class="ghost-btn" onclick="bmpUseShares()">Use these shares in Step 2</button></div>`;
 }
 function bmpUseShares(){
   const B=window.LAST_BUILD;if(!B||!B.order)return;const{items,sh,left}=B.order,keep=new Map(portfolioRows.map(r=>[r.ticker,r]));
