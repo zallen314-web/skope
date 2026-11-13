@@ -380,7 +380,7 @@ canvas{width:100%!important;display:block;}
   <section class="intro-sec"><div class="intro-inner">
     <h3 class="h-bold">Where the data comes from</h3>
     <p class="lead">Prices are pulled live, financial statements come from official SEC filings, and factor returns come from the standard academic source.</p>
-    <div class="src-row"><b>Prices</b><span><a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Daily prices and live quotes, requested from your browser with your own free API key (800 requests a day, no credit card).</span></div>
+    <div class="src-row"><b>Prices</b><span><a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Daily prices adjusted for splits and dividends, so returns include dividends (total return), and live quotes. Requested from your browser with your own free API key (800 requests a day, no credit card).</span></div>
     <div class="src-row"><b>Financial statements</b><span><a href="https://www.sec.gov/edgar" target="_blank">SEC EDGAR</a>. Revenue, earnings, cash flow and balance sheet figures from each company's 10-K and 10-Q filings, summed over the trailing twelve months. Valuation multiples combine these with the live price.</span></div>
     <div class="src-row"><b>Factor returns</b><span><a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html" target="_blank">Kenneth R. French Data Library</a>, Tuck School of Business at Dartmouth. Daily and monthly Fama-French and momentum factors, built into Skope and updated automatically each time a new month is published.</span></div>
     <div class="src-row"><b>Your inputs</b><span>Your API key and saved tickers stay in this browser. Price requests go to Twelve Data.</span></div>
@@ -14881,8 +14881,10 @@ async function loadLogo(t){
 async function fetchTwelvedata(ticker, outputsize=504) {
   const apiKey=getApiKey(); if(!apiKey)throw new Error('No API key. Get a free key at twelvedata.com/register');
   const ck=`td_${ticker}_${outputsize}`; if(CACHE[ck])return CACHE[ck];
+  // adjust=all: history adjusted for splits and dividends, so every return is a total return
   const url=`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(ticker)}&interval=1day&outputsize=${outputsize}&apikey=${apiKey}&order=asc`;
-  const d=await tdJSON(url,ticker);
+  let d=await tdJSON(url+'&adjust=all',ticker);
+  if(d&&d.status==='error'&&/adjust/i.test(d.message||''))d=await tdJSON(url,ticker);
   if(d.status==='error')throw new Error(`${ticker}: ${String(d.message||'error').replace(/\*\*/g,'')}`);
   if(!d.values||d.values.length===0)throw new Error(`No data for ${ticker}`);
   const clean=d.values.filter(v=>v.close&&parseFloat(v.close)>0);
@@ -15984,7 +15986,7 @@ async function renderPortSnapshot(weights,outputsize){
     ${rows.map(r=>`<tr><td>${nm(r)}${r.etf?' <span style="font-size:10px;color:var(--text3)">fund</span>':''}</td><td><b style="color:var(--accent)">${r.t}</b></td><td>${pct(r.w,1)}</td><td>${num(r.close,x=>usd(x))}</td>
       <td>${num(r.eps,x=>(x<0?'−':'')+'$'+Math.abs(x).toFixed(2))}</td><td>${sp(r.epsG)}</td><td>${mult(r.pe)}</td><td>${num(r.m,x=>pct(x,1))}</td><td>${pts(r.dm)}</td><td>${mult(r.ev)}</td><td>${num(r.g,x=>sgnPct(x))}</td><td>${sp(r.ytd)}</td></tr>`).join('')}
     <tr style="font-weight:700"><td>Portfolio</td><td></td><td>100.0%</td><td></td><td></td><td></td><td>${mult(peP)}</td><td></td><td></td><td></td><td></td><td>${sp(ytdP)}</td></tr></table></div>
-    <div class="bmp-fine">Ranked by weight. Close: latest end-of-day${(()=>{const ds=rows.map(r=>PRICES[r.t]?.d).filter(Boolean).sort();return ds.length?` (${escH(pxDate(ds[ds.length-1]))})`:'';})()}. YTD: from the ${+yr-1} close. EPS, P/E, EV/EBITDA: trailing twelve months, SEC filings. Margin: operating (net for banks); chg in pts vs a year ago. Portfolio P/E: weighted harmonic mean.${anyEtf?' Funds show price data only.':''}${pxBad.length&&pxBad.length<rows.length?` No end-of-day price for ${escH(pxBad.join(', '))}; latest quote used.`:''}<br>
+    <div class="bmp-fine">Ranked by weight. Close: latest end-of-day${(()=>{const ds=rows.map(r=>PRICES[r.t]?.d).filter(Boolean).sort();return ds.length?` (${escH(pxDate(ds[ds.length-1]))})`:'';})()}. YTD: total return from the ${+yr-1} close. EPS, P/E, EV/EBITDA: trailing twelve months, SEC filings. Margin: operating (net for banks); chg in pts vs a year ago. Portfolio P/E: weighted harmonic mean.${anyEtf?' Funds show price data only.':''}${pxBad.length&&pxBad.length<rows.length?` No end-of-day price for ${escH(pxBad.join(', '))}; latest quote used.`:''}<br>
     EPS growth priced in: g = (1 + r − d) × (P/E ÷ ${SNAP_EXIT_PE})<sup>1/10</sup> − 1. Price compounds at r less dividend yield d for 10 years and ends at ${SNAP_EXIT_PE}× earnings; solve for EPS growth. r = T-bill + beta × ${pct(BMP_MKT_PREM,0)}${rset.length?` (${rset.map(r=>`${r.t} ${pct(r.rr,1)}`).slice(0,8).join(', ')}${rset.length>8?', …':''})`:''}.</div>`;
 }
 
