@@ -102,6 +102,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,'S
 .bmp-hrow{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.bmp-big{font-size:22px;color:var(--accent);margin-bottom:2px}
 .bmp-acts{display:flex;gap:8px}.bmp-how p{font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:8px}
 .ftbl{width:100%;border-collapse:collapse;}
+.ftbl.snap td,.ftbl.snap th{white-space:nowrap;padding:7px 8px;}.ftbl.snap td:first-child{white-space:normal;min-width:120px;}
 .ftbl th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:var(--text3);border-bottom:2px solid var(--border);background:var(--surface2);}
 .ftbl td{padding:7px 10px;border-bottom:1px solid var(--border2);font-family:inherit;font-size:12px;}
 .ftbl tr:last-child td{border-bottom:none;}
@@ -506,18 +507,15 @@ canvas{width:100%!important;display:block;}
           </div>
         </div>
       </div>
-      <div class="card" style="margin-top:14px"><div class="card-title">Step 2 · About you</div>
-        <div id="bmp-q"></div><div id="bmp-score"></div>
-      </div>
-      <div class="card" style="margin-top:14px"><div class="card-title">Step 3 · Build</div>
-        <label class="bmp-chk"><input type="checkbox" id="bmp-sleeve" checked> Allow cash (BIL) and bonds (AGG)</label>
-        <div class="bmp-fine" style="margin:4px 0 12px">No more than 20% in any one stock or ETF.</div>
+      <div class="card" style="margin-top:14px"><div class="card-title">Step 2 · Build</div>
+        <label class="bmp-chk"><input type="checkbox" id="bmp-sleeve" checked> Allow bonds (AGG)</label>
+        <div class="bmp-fine" style="margin:4px 0 12px">Finds the mix with the best expected return for its risk. No more than 20% in any one stock or ETF.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div class="field"><label>History</label><select id="p-period" style="width:100%"><option value="756">3 Years</option><option value="1260" selected>5 Years</option><option value="2520">10 Years</option></select></div>
           <div class="field"><label>Benchmark</label><select id="p-bench" style="width:100%"><option value="SPY">S&P 500 (SPY)</option><option value="QQQ">Nasdaq (QQQ)</option><option value="IWM">Russell 2000 (IWM)</option></select></div>
         </div>
         <button class="run-btn" id="bmp-btn" onclick="runBuild()" style="width:100%">Build my portfolio</button>
-        <div class="status-bar" style="margin-top:10px;margin-bottom:0"><div class="sdot" id="bmp-dot"></div><span id="bmp-status">Add holdings, answer the questions, then build</span></div>
+        <div class="status-bar" style="margin-top:10px;margin-bottom:0"><div class="sdot" id="bmp-dot"></div><span id="bmp-status">Add holdings, then build</span></div>
       </div>
       <div class="card" style="margin-top:14px"><div class="card-title">Analyze a portfolio</div>
         <p class="bmp-fine" style="margin-bottom:10px">Full performance, factor and risk analysis of the weights in Step 1.</p>
@@ -540,7 +538,7 @@ canvas{width:100%!important;display:block;}
         <div id="p-wl-list"><div class="wl-empty">No tickers saved yet.</div></div>
       </div>
     </div>
-    <div id="p-output"><div class="empty">Build your portfolio on the left<br><div class="small">Add holdings · Answer five questions · Get model weights</div></div></div>
+    <div id="p-output"><div class="empty">Build your portfolio on the left<br><div class="small">Add holdings · Build · Get model weights and share counts</div></div></div>
   </div>
 </div>
 
@@ -14736,7 +14734,7 @@ function renderWeightRows(){
   syncPortModeUI();
   if(!portfolioRows.length){el.innerHTML=`<div class="wl-empty">Add tickers below or from Coverage List</div>`;return;}
   if(PORT_MODE==='shares'){
-    el.innerHTML=portfolioRows.map(r=>{const px=PRICES[r.ticker];return`<div class="weight-row sh"><div style="min-width:0"><div class="w-ticker">${r.ticker}</div><div class="w-name" id="wp-${r.ticker}">${pxLine(r)}</div></div><input type="number" class="w-input" value="${r.shares||''}" placeholder="0" title="Shares" min="0" step="any" oninput="onSChange('${r.ticker}',this.value)"><div class="w-val" id="wv-${r.ticker}"></div><button class="w-rm" onclick="removeWeightRow('${r.ticker}')">✕</button></div>`;}).join('');
+    el.innerHTML=portfolioRows.map(r=>{const px=PRICES[r.ticker];return`<div class="weight-row sh"><div style="min-width:0"><div class="w-ticker">${r.ticker}</div><div class="w-name" id="wp-${r.ticker}">${pxLine(r)}</div></div><input type="number" class="w-input" value="${r.shares||''}" placeholder="0" title="Shares" min="0" step="1" oninput="onSChange('${r.ticker}',this.value)"><div class="w-val" id="wv-${r.ticker}"></div><button class="w-rm" onclick="removeWeightRow('${r.ticker}')">✕</button></div>`;}).join('');
     updateShareSummary();return;
   }
   el.innerHTML=portfolioRows.map(r=>`<div class="weight-row"><div><div class="w-ticker">${r.ticker}</div><div class="w-name">${r.name}</div></div><input type="number" class="w-input" value="${r.weight}" min="0" max="100" step="0.01" onchange="onWChange('${r.ticker}',this.value)" oninput="onWChange('${r.ticker}',this.value)"><button class="w-rm" onclick="removeWeightRow('${r.ticker}')">✕</button></div>`).join('');
@@ -14822,7 +14820,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 function switchTab(tab){
   ['single','portfolio','compare'].forEach(t=>{document.getElementById(`pane-${t}`).style.display=t===tab?'block':'none';document.getElementById(`tab-${t}`).className='tab'+(t===tab?' active':'');});
   if(tab==='compare')renderChips();
-  if(tab==='portfolio'){renderPortWL();renderWeightRows();updateWeightBar();renderBmpQ();refreshPortPrices();}
+  if(tab==='portfolio'){renderPortWL();renderWeightRows();updateWeightBar();refreshPortPrices();}
 }
 function setS(id,msg,st='active'){document.getElementById(`${id}-dot`).className='sdot '+st;document.getElementById(`${id}-status`).textContent=msg;}
 function upP(id,st,msg){const el=document.getElementById('prog-'+id);if(!el)return;el.querySelector('.dot').className='dot '+st;el.querySelector('.label').textContent=msg;}
@@ -15358,7 +15356,7 @@ function saveNamedPortfolio(){
   // clean slate for the next portfolio (the saved one is in the dropdown)
   portfolioRows=[];savePort();renderWeightRows();updateWeightBar();
   document.getElementById('pf-select').value='';document.getElementById('pf-del').style.display='none';
-  document.getElementById('p-output').innerHTML='<div class="empty">Build your portfolio on the left<br><div class="small">Add holdings · Answer five questions · Get model weights</div></div>';
+  document.getElementById('p-output').innerHTML='<div class="empty">Build your portfolio on the left<br><div class="small">Add holdings · Build · Get model weights and share counts</div></div>';
   window.LAST_PORT=null;
   toast(USER?`✓ Saved "${name}" to your account`:`✓ Saved "${name}" in this browser. Sign in to keep it on every device.`);
 }
@@ -15960,9 +15958,52 @@ async function runPortfolio(){
     window.LAST_PORT={weights,model,result,annF,factors:Xm2[model],bench,freq,bBeta};
     renderPortResults(weights,model,result,pA,mktRaw,st,benchSt,benchRets,annF,!ffData,freq,bench);
     renderPortRisk(weights,outputsize,freq,bench).catch(e=>console.warn('risk',e));
+    renderPortSnapshot(weights,outputsize).catch(e=>{const b=document.getElementById('p-snap-body');if(b)b.innerHTML=`<div class="warn">Couldn't load the snapshot: ${escH(e.message)}</div>`;});
     renderResearchTab('p-research',weights.map(w=>w.ticker),'your holdings').catch(e=>console.warn('research',e));
   }catch(e){setS('p','Error: '+e.message,'error');document.getElementById('p-output').innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Error</div><p style="font-family:inherit;font-size:12px;color:var(--red)">${e.message}</p></div>`;}
   TD_WAIT=null;document.getElementById('p-runBtn').disabled=false;
+}
+
+// ── Holdings snapshot (Analyze → Summary) ───────────────────────────────────
+// Close: latest end-of-day price. EPS, margins and EV/EBITDA: SEC filings, trailing twelve months.
+// Margin change: operating margin (net margin for banks) vs the twelve months a year earlier, in points.
+// Implied growth: a reverse DCF. Market cap = FCF × (1+g) / (r − g), solved for g, with r = T-bill
+// rate + beta × the 6% market premium (beta from monthly returns vs the market factor).
+async function renderPortSnapshot(weights,outputsize){
+  const body=()=>document.getElementById('p-snap-body');
+  const tk=[...weights].sort((a,b)=>b.w-a.w);
+  let pxBad=[];try{pxBad=await fetchEOD(tk.map(w=>w.ticker));}catch(e){pxBad=tk.map(w=>w.ticker);}
+  const F=bmpFactors(),yr=String(new Date().getFullYear()),rows=[];
+  for(const w of tk){
+    if(!body())return;body().innerHTML=`<div class="bmp-fine">Loading ${escH(w.ticker)} (${rows.length+1} of ${tk.length})…</div>`;
+    const f=await fetchFundamentals(w.ticker).catch(()=>null),sec=f&&f._sec,pv=sec&&sec.prev;
+    let d=null;try{d=await fetchTwelvedata(w.ticker,outputsize);}catch(e){}
+    const close=PRICES[w.ticker]?.c??f?.currentPrice??(d?d.closes[d.closes.length-1]:null);
+    let ytd=null;if(d&&close){let k=-1;for(let i=d.daily.length-1;i>=0;i--)if(d.daily[i].date<yr+'0101'){k=i;break;}if(k>=0)ytd=close/d.closes[k+1]-1;}
+    const mg=(op,ni,rev)=>rev>0?(op!=null&&!(f&&f.isBank)?op/rev:ni!=null?ni/rev:null):null;
+    const m=sec?mg(sec.operatingIncomeTTM,sec.netIncomeTTM,sec.revenueTTM):null,mp=pv?mg(pv.operatingIncomeTTM,pv.netIncomeTTM,pv.revenueTTM):null;
+    let g=null,rr=null;
+    if(sec&&f.marketCap&&sec.freeCashFlowTTM>0&&d){const rk=rkRows(d.monthly);if(rk.length>=24){const b=ols(rk.map(x=>x.y),rkCols(rk,1)).betas[0];
+      rr=F.rf+Math.max(0.3,b)*BMP_MKT_PREM;const M=f.marketCap,C=sec.freeCashFlowTTM;g=(rr*M-C)/(M+C);}}
+    rows.push({t:w.ticker,w:w.w,name:(sec&&sec.name)||f?.name||w.name||w.ticker,etf:!sec,close,ytd,eps:f?.eps??null,epsG:f?.epsGrowth??null,pe:f?.trailingPE??null,
+      m,dm:m!=null&&mp!=null?m-mp:null,ev:f?.evToEbitda??null,g,rr,bank:!!f?.isBank});
+  }
+  if(!body())return;
+  const tc=s=>String(s).toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase()).replace(/\b(Inc|Corp|Co|Ltd|Plc|Etf|Llc)\b\.?/g,x=>x.charAt(0).toUpperCase()+x.slice(1).toLowerCase());
+  const nm=r=>escH(/[a-z]/.test(r.name)?r.name:tc(r.name)).split(' ').slice(0,4).join(' ');
+  const dash='<span style="color:var(--text3)">—</span>',num=(v,f)=>v==null||!isFinite(v)?dash:f(v);
+  const sp=v=>num(v,x=>`<span class="${x>=0?'pos':'neg'}">${sgnPct(x)}</span>`),mult=v=>num(v,x=>x>0?x.toFixed(1)+'×':dash);
+  const pts=v=>num(v,x=>`<span class="${x>=0?'pos':'neg'}">${x>=0?'+':'−'}${Math.abs(x*100).toFixed(1)} pts</span>`);
+  // weighted portfolio row: YTD weighted average; P/E as weighted harmonic mean of the stocks with positive earnings
+  const wy=rows.filter(r=>r.ytd!=null),ytdP=wy.length?wy.reduce((s,r)=>s+r.w*r.ytd,0)/wy.reduce((s,r)=>s+r.w,0):null;
+  const wp=rows.filter(r=>r.pe>0),peP=wp.length?wp.reduce((s,r)=>s+r.w,0)/wp.reduce((s,r)=>s+r.w/r.pe,0):null;
+  const anyEtf=rows.some(r=>r.etf),rset=rows.filter(r=>r.rr!=null);
+  body().innerHTML=`<div style="overflow-x:auto"><table class="ftbl snap"><tr><th>Company</th><th>Ticker</th><th>Weight</th><th>Close</th><th>EPS</th><th>EPS YoY</th><th>P/E</th><th>Margin</th><th>Margin chg</th><th>EV/EBITDA</th><th>Implied growth</th><th>YTD</th></tr>
+    ${rows.map(r=>`<tr><td>${nm(r)}${r.etf?' <span style="font-size:10px;color:var(--text3)">fund</span>':''}</td><td><b style="color:var(--accent)">${r.t}</b></td><td>${pct(r.w,1)}</td><td>${num(r.close,x=>usd(x))}</td>
+      <td>${num(r.eps,x=>(x<0?'−':'')+'$'+Math.abs(x).toFixed(2))}</td><td>${sp(r.epsG)}</td><td>${mult(r.pe)}</td><td>${num(r.m,x=>pct(x,1))}</td><td>${pts(r.dm)}</td><td>${mult(r.ev)}</td><td>${num(r.g,x=>sgnPct(x))}</td><td>${sp(r.ytd)}</td></tr>`).join('')}
+    <tr style="font-weight:700"><td>Portfolio</td><td></td><td>100.0%</td><td></td><td></td><td></td><td>${mult(peP)}</td><td></td><td></td><td></td><td></td><td>${sp(ytdP)}</td></tr></table></div>
+    <div class="bmp-fine">Ranked by weight. Close is the latest end-of-day price${(()=>{const ds=rows.map(r=>PRICES[r.t]?.d).filter(Boolean).sort();return ds.length?` (${escH(pxDate(ds[ds.length-1]))})`:'';})()}; YTD is from the last close of ${+yr-1}. EPS, P/E and EV/EBITDA use trailing-twelve-month figures from SEC filings. Margin is operating margin (net margin for banks); margin chg is the change from a year earlier.
+    Implied growth is the perpetual free-cash-flow growth rate today's market cap implies (a reverse DCF), discounted at the T-bill rate plus beta × a ${pct(BMP_MKT_PREM,0)} market premium${rset.length?` (${rset.map(r=>`${r.t} ${pct(r.rr,1)}`).slice(0,6).join(', ')}${rset.length>6?', …':''})`:''}; it's blank when free cash flow is negative. Portfolio P/E is the weighted harmonic mean of holdings with positive earnings.${anyEtf?' Funds and ETFs have no SEC company filings, so only price figures are shown.':''}${pxBad.length&&pxBad.length<rows.length?` No end-of-day price for ${escH(pxBad.join(', '))}; the latest quote is used.`:''}</div>`;
 }
 
 // Portfolio results are split into tabs, like the Individual page
@@ -15983,6 +16024,7 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
     <div id="p-subtabs" class="subtabs">${[['summary','Summary'],['perf','Performance'],['factors','Factor exposures'],['dist','Return distribution'],['risk','Risk'],['research','Research']].map(([k,l])=>`<button id="pt-${k}" class="stab" onclick="setPortTab('${k}')">${l}</button>`).join('')}</div>
     <div id="pp-summary">
     ${window.LAST_PORT&&!proxy?portInsightsHTML(window.LAST_PORT):''}
+    <div class="card" id="p-snap"><div class="card-title">Holdings snapshot</div><div id="p-snap-body"><div class="bmp-fine">Loading prices and SEC filings…</div></div></div>
     <div class="card"><div class="card-title">Allocation</div>
       <div class="donut-wrap">
         <canvas id="p-donut" width="150" height="150" style="width:150px!important;height:150px!important;flex-shrink:0"></canvas>
@@ -16048,13 +16090,11 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
 }
 
 // ── Comparison ────────────────────────────────────────────────────────────────
-// ── Build my portfolio: a few answers → model weights ─────────────────────────
-// Risk profile: willingness (how you react to losses, what you want) and ability (horizon, liquidity
-// needs, income). The lower of the two sets a target volatility. Expected returns come from each
-// holding's factor betas × long-run factor premia (alpha set to zero); risk comes from a factor-model
-// covariance (B Ω Bᵀ + residual variance). The optimizer finds the long-only mix with the highest
-// expected return at the target volatility, with at most 20% in any one holding. Cash (BIL) and
-// bonds (AGG) can be added for lower-risk profiles and are not capped.
+// ── Build my portfolio: holdings → model weights ─────────────────────────────
+// Expected returns come from each holding's factor betas × long-run factor premia (alpha set to zero);
+// risk comes from a factor-model covariance (B Ω Bᵀ + residual variance). The optimizer finds the
+// long-only mix with the highest Sharpe ratio, with at most 20% in any one holding. Bonds (AGG) can
+// be added and are not capped.
 const BMP_CAP=0.20, BMP_HAIRCUT=0.5, BMP_MKT_PREM=0.06, BMP_BOND_PREM=0.010, BMP_ANS_KEY='skope_bmp_answers';
 const BMP_CASH='BIL', BMP_BOND='AGG';
 const BMP_Q=[
@@ -16149,15 +16189,13 @@ function bmpFrontier(mu,S,u,rf){const L=bmpLmax(S),pts=[];let w=null;
   return pts;}
 
 async function runBuild(){
-  const prof=bmpScore();
-  if(!prof){toast('Answer the questions in Step 2 first');document.getElementById('bmp-q')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
   const sleeve=document.getElementById('bmp-sleeve').checked;
   let tick=portfolioRows.map(r=>r.ticker);
-  if(!sleeve)tick=tick.filter(t=>t!==BMP_CASH&&t!==BMP_BOND);
+  tick=tick.filter(t=>t!==BMP_CASH);if(!sleeve)tick=tick.filter(t=>t!==BMP_BOND);
   if(tick.filter(t=>t!==BMP_CASH&&t!==BMP_BOND).length<2){toast('Add at least two stocks or ETFs in Step 1');return;}
-  if(!sleeve&&tick.length*BMP_CAP<1){toast(`With a 20% cap you need at least 5 holdings, or allow cash and bonds`);return;}
+  if(!sleeve&&tick.length*BMP_CAP<1){toast(`With a 20% cap you need at least 5 holdings, or allow bonds`);return;}
   if(LIVE||!getApiKey()){openKeyPage(LIVE?LIVE_MORE:'Add your Twelve Data key to run real tickers. You only need to do this once.');return;}
-  if(sleeve){for(const t of[BMP_BOND,BMP_CASH])if(!tick.includes(t))tick.push(t);}
+  if(sleeve&&!tick.includes(BMP_BOND))tick.push(BMP_BOND);
   const outputsize=Math.max(1260,parseInt(document.getElementById('p-period').value)),bench=document.getElementById('p-bench').value;
   const btn=document.getElementById('bmp-btn');btn.disabled=true;
   const fetchList=[...tick.filter(t=>t!==BMP_CASH),...(tick.includes(bench)?[]:[bench])];
@@ -16180,13 +16218,15 @@ async function runBuild(){
     if(!sleeve&&assets.length*BMP_CAP<1)throw new Error('With a 20% cap, at least 5 holdings need enough price history');
     upP('bopt','loading','Optimizing…');setS('bmp','Optimizing…','active');
     const{mu,S}=bmpInputs(assets,F),u=assets.map(a=>a.kind==='risky'?BMP_CAP:1);
+    const fr0=bmpFrontier(mu,S,u,F.rf),best=fr0.reduce((b,p)=>p.sh>b.sh+1e-4||(Math.abs(p.sh-b.sh)<=1e-4&&p.x>b.x)?p:b,fr0[0]);
+    const prof={name:'Highest risk-adjusted return',vol:best.x/100};
     const res=bmpTarget(mu,S,u,prof.vol),w=bmpClean(mu,S,u,prof.vol,res);
     const model=bmpStats(w,mu,S,assets,F.rf);
     const curRows=portfolioRows.filter(r=>assets.some(a=>a.ticker===r.ticker)),curTot=curRows.reduce((s,r)=>s+(+r.weight||0),0);
     let cur=null;if(Math.abs(curTot-100)<0.5){const cw=assets.map(a=>(+(curRows.find(r=>r.ticker===a.ticker)?.weight)||0)/100);cur={w:cw,...bmpStats(cw,mu,S,assets,F.rf)};}
     let bst=null;if(benchA){const{mu:bm,S:bS}=bmpInputs([benchA],F);bst=bmpStats([1],bm,bS,[benchA],F.rf);}
-    const front=bmpFrontier(mu,S,u,F.rf);
-    upP('bopt','ok','Done');setS('bmp',`${prof.name} · expected ${pct(model.ret,1)} a year at ${pct(model.vol,1)} volatility`,'done');
+    const front=fr0;
+    upP('bopt','ok','Done');setS('bmp',`Built · expected ${pct(model.ret,1)} a year at ${pct(model.vol,1)} volatility`,'done');
     window.LAST_BUILD={assets,w,mu,S,prof,model,cur,bst,bench,front,F,hit:res.hit,skipped,sleeve};
     renderBuild();
   }catch(e){setS('bmp','Error: '+e.message,'error');out.innerHTML=`<div class="card" style="border-left:3px solid var(--red)"><div class="card-title" style="color:var(--red)">Couldn't build the portfolio</div><p style="font-size:12.5px;color:var(--red)">${escH(e.message)}</p></div>`;}
@@ -16201,11 +16241,10 @@ function renderBuild(){
   const p1=v=>v==null?'—':pct(v,1),chg=(a,b)=>{const d=(a-b)*100;return Math.abs(d)<0.05?'<span style="color:var(--text3)">—</span>':`<span class="${d>0?'pos':'neg'}">${d>0?'+':'−'}${Math.abs(d).toFixed(1)}</span>`;};
   const col=(lbl,f,fmt=p1)=>`<tr><td>${lbl}</td>${cur?`<td>${fmt(f(cur))}</td>`:''}<td><b>${fmt(f(model))}</b></td>${bst?`<td>${fmt(f(bst))}</td>`:''}</tr>`;
   const sleeveW=assets.reduce((s,a,i)=>s+(a.kind!=='risky'?w[i]:0),0);
-  const note=!B.hit&&model.vol<prof.vol-0.005?`These holdings can't reach ${Math.round(prof.vol*100)}% volatility with a 20% cap, so this is the highest-return mix available (${p1(model.vol)}).`
-    :!B.hit&&model.vol>prof.vol+0.005?`Even the lowest-risk mix of these holdings is above ${Math.round(prof.vol*100)}% volatility. ${B.sleeve?'':'Allowing cash and bonds would bring it down.'}`:'';
+  const note='';
   document.getElementById('p-output').innerHTML=`
   <div class="card bmp-hero"><div class="card-title">Your model portfolio</div>
-    <div class="bmp-hrow"><div><div class="bmp-big">${prof.name}</div><div class="bmp-ps">Risk score ${prof.R} of 5 (willingness ${prof.W}, ability ${prof.C}) · target about ${Math.round(prof.vol*100)}% volatility a year${sleeveW>0.0005?` · ${p1(sleeveW)} in cash and bonds`:''}</div></div>
+    <div class="bmp-hrow"><div><div class="bmp-big">Highest Sharpe ratio mix</div><div class="bmp-ps">The best expected return per unit of risk from these holdings · about ${p1(model.vol)} volatility a year${sleeveW>0.0005?` · ${p1(sleeveW)} in bonds`:''}</div></div>
     <div class="bmp-acts"><button class="ghost-btn" onclick="bmpUse(false)">Use these weights</button><button class="run-btn" onclick="bmpUse(true)">Analyze these weights</button></div></div>
     ${note?`<div class="warn" style="margin-top:10px">${note}</div>`:''}
     ${B.skipped.length?`<div class="warn" style="margin-top:10px">Left out: ${escH(B.skipped.join('; '))}.</div>`:''}
@@ -16214,7 +16253,6 @@ function renderBuild(){
     <p class="bmp-ps" style="margin:-2px 0 12px">How many shares of each to buy at the latest closing prices, and how much cash is left over.</p>
     <div class="ord-in">
       <div class="field"><label>Amount to invest</label><div class="money-in"><span>$</span><input type="number" id="bmp-amt" min="0" step="100" value="${bmpDefaultAmt()}" oninput="bmpAmtChanged(this.value)"></div></div>
-      <label class="bmp-chk" style="margin-bottom:8px"><input type="checkbox" id="bmp-frac" onchange="renderOrder()"> Fractional shares</label>
     </div>
     <div id="bmp-order-out"><div class="bmp-fine">Getting prices…</div></div>
   </div>
@@ -16229,17 +16267,16 @@ function renderBuild(){
   <div class="card"><div class="card-title">Weights</div>
     <table class="ftbl"><tr><th>Holding</th>${cur?'<th>Current</th>':''}<th>Model</th>${cur?'<th>Change (pts)</th>':''}<th>Expected return</th><th>Volatility</th><th>Market beta</th></tr>
     ${order.map(i=>{const a=assets[i];return`<tr${w[i]<0.0005?' style="opacity:.55"':''}><td><b style="color:var(--accent)">${a.ticker}</b> <span style="color:var(--text3);font-size:11px">${label(a)}</span></td>${cur?`<td>${p1(cur.w[i])}</td>`:''}<td><b>${p1(w[i])}</b></td>${cur?`<td>${chg(w[i],cur.w[i])}</td>`:''}<td>${p1(rf+mu[i])}</td><td>${p1(vol[i])}</td><td>${a.b[0].toFixed(2)}</td></tr>`;}).join('')}</table>
-    <div class="bmp-fine">No more than 20% in any one stock or ETF. Cash and bonds aren't capped. Holdings under 0.5% are dropped.</div>
+    <div class="bmp-fine">No more than 20% in any one stock or ETF. Bonds (AGG) aren't capped. Holdings under 0.5% are dropped.</div>
   </div>
   <div class="card"><div class="card-title">Factor exposures</div>
     <table class="ftbl"><tr><th>Factor</th>${cur?'<th>Current</th>':''}<th>Model</th>${bst?`<th>${bench}</th>`:''}<th>Long-run premium used</th></tr>
     ${BMP_FN.map((f,j)=>`<tr><td>${f}</td>${cur?`<td>${cur.beta[j].toFixed(2)}</td>`:''}<td><b>${model.beta[j].toFixed(2)}</b></td>${bst?`<td>${bst.beta[j].toFixed(2)}</td>`:''}<td>${pct(F.lam[j]*12,1)} a year</td></tr>`).join('')}</table>
   </div>
   <div class="card"><div class="card-title">How the weights are set</div><div class="bmp-how">
-    <p><b>Risk profile.</b> Your answers give a willingness score (how you'd react to a loss and what you want) and an ability score (time horizon, chance of needing the money early, income). Skope uses the lower of the two and sets a target volatility from it.</p>
     <p><b>Expected returns.</b> Each holding's expected return is its betas to six factors (market, size, value, profitability, investment, momentum) times each factor's long-run average premium, plus the T-bill rate (${pct(rf,1)}). The market premium is set at ${pct(BMP_MKT_PREM,1)} a year, a forward-looking estimate below the ${pct(F.raw[0]*12,1)} US stocks earned over cash from ${ymLabel(F.from)} to ${ymLabel(F.to)}. The other premia are the Ken French averages over the same period, cut in half, since published factors have earned less after they were discovered. Alpha is set to zero: past outperformance isn't assumed to repeat. Bonds are assumed to earn ${pct(BMP_BOND_PREM,1)} a year over cash.</p>
     <p><b>Risk.</b> Covariances come from the factor model: shared factor exposures plus each holding's own residual risk, from ${assets.find(a=>a.n)?.n||'~60'} months of returns. That's steadier than raw historical correlations, and it captures overlap such as an ETF holding the same stocks you own.</p>
-    <p><b>Optimization.</b> The highest expected return at your target volatility. Long only, at most 20% per holding, fully invested.</p>
+    <p><b>Optimization.</b> The mix with the highest Sharpe ratio (expected return over cash per unit of volatility) on the efficient frontier. Long only, at most 20% per holding, fully invested.</p>
     <p class="bmp-fine">These are model weights from the assumptions above, not a recommendation. Expected returns are estimates and can be badly wrong. Skope is for informational and educational purposes only and is not investment advice.</p>
   </div></div>`;
   drawBmpFront();loadOrderPrices();
@@ -16266,7 +16303,7 @@ function bmpAllocate(amt,items,frac){
 }
 function renderOrder(){
   const B=window.LAST_BUILD,el=document.getElementById('bmp-order-out');if(!B||!el)return;
-  const amt=Math.max(0,parseFloat(document.getElementById('bmp-amt')?.value)||0),frac=!!document.getElementById('bmp-frac')?.checked,cs=curShares(),hasCur=Object.keys(cs).length>0;
+  const amt=Math.max(0,parseFloat(document.getElementById('bmp-amt')?.value)||0),frac=false,cs=curShares(),hasCur=Object.keys(cs).length>0;
   const items=B.assets.map((a,i)=>({a,w:B.w[i],p:PRICES[a.ticker]?.c||0,d:PRICES[a.ticker]?.d||''})).filter(it=>it.w>0.0005||cs[it.a.ticker]);
   if(!items.some(it=>it.p)){el.innerHTML=B.pxErr?`<div class="warn">${escH(B.pxErr)}</div>`:'<div class="bmp-fine">Getting prices…</div>';return;}
   if(!amt){el.innerHTML='<div class="bmp-fine">Enter an amount to invest.</div>';return;}
@@ -16284,7 +16321,7 @@ function renderOrder(){
     ${ord.map(i=>{const it=items[i];return`<tr${sh[i]===0&&!cs[it.a.ticker]?' style="opacity:.55"':''}><td><b style="color:var(--accent)">${it.a.ticker}</b></td><td>${pct(it.w,1)}</td><td>${it.p?usd(it.p):'—'}</td><td><b>${shFmt(sh[i])}</b></td><td>${usd(cost[i])}</td><td>${pct(cost[i]/amt,1)}</td>${hasCur?`<td>${shFmt(cs[it.a.ticker]||0)}</td><td>${trade(i)}</td>`:''}</tr>`;}).join('')}
     <tr><td><b>Cash</b></td><td>—</td><td>—</td><td>—</td><td>${usd(left)}</td><td>${pct(left/amt,1)}</td>${hasCur?'<td></td><td></td>':''}</tr></table></div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">
-      <div class="bmp-fine" style="margin:0;flex:1;min-width:220px">End-of-day closing prices${asOf?` from ${escH(asOf)}`:''}; what you pay at the open will differ.${frac?'':' Whole shares only: each target is rounded down, then leftover cash buys extra shares of whatever is furthest below target.'}${usesBil?` ${BMP_CASH} is a T-bill ETF; you can hold that slice as plain cash instead.`:''}${hasCur?' Trades compare against the shares in Step 1.':''}</div>
+      <div class="bmp-fine" style="margin:0;flex:1;min-width:220px">End-of-day closing prices${asOf?` from ${escH(asOf)}`:''}; what you pay at the open will differ. Whole shares only: each target is rounded down, then leftover cash buys extra shares of whatever is furthest below target.${usesBil?` ${BMP_CASH} is a T-bill ETF; you can hold that slice as plain cash instead.`:''}${hasCur?' Trades compare against the shares in Step 1.':''}</div>
       <button class="ghost-btn" onclick="bmpUseShares()">Use these shares in Step 1</button></div>`;
 }
 function bmpUseShares(){
@@ -16300,10 +16337,9 @@ function drawBmpFront(){
   const B=window.LAST_BUILD,el=document.getElementById('bmp-front');if(!B||!el||typeof Chart==='undefined')return;
   if(window._bmpChart)window._bmpChart.destroy();
   const pts=B.front.filter((p,i,a)=>i===0||Math.abs(p.x-a[i-1].x)>0.05||Math.abs(p.y-a[i-1].y)>0.05);
-  const ms=pts.reduce((b,p)=>p.sh>b.sh+1e-4||(Math.abs(p.sh-b.sh)<=1e-4&&p.x>b.x)?p:b,pts[0]);
   const ds=[{label:'Efficient frontier',data:pts.map(p=>({x:p.x,y:p.y})),showLine:true,borderColor:'#9aa59f',backgroundColor:'#9aa59f',pointRadius:0,borderWidth:2,tension:0.25,order:5},
-    {label:'Model portfolio',data:[{x:B.model.vol*100,y:B.model.ret*100}],backgroundColor:'#1d4433',pointRadius:7,pointStyle:'circle',order:1},
-    {label:'Highest Sharpe',data:[{x:ms.x,y:ms.y}],backgroundColor:'#c8902e',pointRadius:5,pointStyle:'rectRot',order:2}];
+    {label:'Model portfolio (highest Sharpe)',data:[{x:B.model.vol*100,y:B.model.ret*100}],backgroundColor:'#1d4433',pointRadius:7,pointStyle:'circle',order:1},
+];
   if(B.cur)ds.push({label:'Current weights',data:[{x:B.cur.vol*100,y:B.cur.ret*100}],backgroundColor:'#a8483a',pointRadius:6,pointStyle:'triangle',order:1});
   if(B.bst)ds.push({label:B.bench,data:[{x:B.bst.vol*100,y:B.bst.ret*100}],backgroundColor:'#4a78b5',pointRadius:5,pointStyle:'rect',order:3});
   window._bmpChart=new Chart(el,{type:'scatter',data:{datasets:ds},options:{responsive:true,animation:false,
