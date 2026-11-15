@@ -218,6 +218,7 @@ canvas{width:100%!important;display:block;}
 .w-input:focus{border-color:var(--accent);}
 .w-rm{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px;border-radius:3px;transition:all 0.1s;}
 .w-rm:hover{background:#f6e9e9;color:var(--red);}
+.clr-btn{background:none;border:none;color:var(--text3);font-family:inherit;font-size:11.5px;cursor:pointer;padding:0;}.clr-btn:hover{color:var(--red);text-decoration:underline;}
 .pm-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 16px 12px;font-size:11.5px;color:var(--text2);}
 .seg{display:inline-flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;flex-shrink:0;}
 .seg button{background:var(--surface);border:none;padding:5px 11px;font-family:inherit;font-size:11.5px;color:var(--text2);cursor:pointer;}
@@ -482,7 +483,7 @@ canvas{width:100%!important;display:block;}
       </div>
       <div class="port-panel">
         <div class="port-hdr"><div class="port-title">Step 2 · Add stocks</div><div class="port-sub">Enter a % weight or a number of shares for each, and see the dollars at the latest close.</div></div>
-        <div class="pm-row"><span>Enter as</span><div class="seg"><button id="pm-w" onclick="setPortMode('weights')">% weights</button><button id="pm-s" onclick="setPortMode('shares')">Shares</button></div></div>
+        <div class="pm-row"><span>Enter as</span><div style="display:flex;align-items:center;gap:10px"><div class="seg"><button id="pm-w" onclick="setPortMode('weights')">% weights</button><button id="pm-s" onclick="setPortMode('shares')">Shares</button></div><button class="clr-btn" id="p-clear" onclick="clearPortfolio()" title="Remove all holdings">Clear all</button></div></div>
         <div class="pf-row"><select id="pf-select" onchange="pfSelectChanged(this.value)"><option value="">Saved portfolios…</option></select><button class="ghost-btn" onclick="saveNamedPortfolio()">Save</button><button class="ghost-btn pf-del" id="pf-del" style="display:none" onclick="deleteSavedPortfolio(document.getElementById('pf-select').value)">Delete</button></div>
         <div id="weight-rows"><div class="wl-empty">Add tickers below or from Coverage List</div></div>
         <div class="add-row">
@@ -14711,6 +14712,14 @@ function addWeightRow(ticker,name,w){
 function addWeightRowFromWL(t,n){if(portfolioRows.find(r=>r.ticker===t)){toast(`${t} already in portfolio`);return;}portfolioRows.push({ticker:t,name:n,weight:0});savePort();renderWeightRows();updateWeightBar();refreshPortPrices();toast(`${t} added`);}
 function removeWeightRow(t){portfolioRows=portfolioRows.filter(r=>r.ticker!==t);syncWeightsFromShares();savePort();renderWeightRows();updateWeightBar();}
 function onWChange(t,v){const r=portfolioRows.find(r=>r.ticker===t);if(r)r.weight=parseFloat(v)||0;savePort();updateWeightBar();}
+// Remove every holding from Step 2 (keeps the Step 1 amount)
+function clearPortfolio(){
+  if(!portfolioRows.length){toast('Nothing to clear');return;}
+  if(!confirm(`Remove all ${portfolioRows.length} holdings?`))return;
+  portfolioRows=[];savePort();renderWeightRows();updateWeightBar();
+  const o=document.getElementById('p-output');if(o&&document.getElementById('bmp-order'))o.innerHTML='';
+  toast('Holdings cleared');
+}
 function equalWeight(){if(!portfolioRows.length)return;const w=+(100/portfolioRows.length).toFixed(2);portfolioRows.forEach((r,i)=>r.weight=i===portfolioRows.length-1?+(100-w*(portfolioRows.length-1)).toFixed(2):w);savePort();renderWeightRows();updateWeightBar();}
 function normalizeWeights(){const tot=portfolioRows.reduce((s,r)=>s+r.weight,0);if(!tot){toast('All weights 0');return;}portfolioRows.forEach(r=>r.weight=+((r.weight/tot)*100).toFixed(2));const d=100-portfolioRows.reduce((s,r)=>s+r.weight,0);if(portfolioRows.length)portfolioRows[portfolioRows.length-1].weight=+(portfolioRows[portfolioRows.length-1].weight+d).toFixed(2);savePort();renderWeightRows();updateWeightBar();}
 function renderWeightRows(){
