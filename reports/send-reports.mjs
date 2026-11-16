@@ -5,7 +5,7 @@
 //   node send-reports.mjs --dry-run       → build reports, write HTML to ./out, send nothing, save nothing
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, TWELVEDATA_API_KEY, RESEND_API_KEY, EMAIL_FROM, SITE_URL
 import { strFromU8, unzipSync } from 'fflate';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { analyze, cleanDaily, parseFrenchMonthly } from './core.mjs';
 import { buildEmail, buildSubject } from './email.mjs';
 import { addNews } from './news.mjs';
@@ -25,11 +25,26 @@ async function db(path, opts = {}) {
 }
 
 // ── data sources ──────────────────────────────────────────────────────────────
-async function frenchZip(name) {
+// Download from the Ken French Data Library (2 tries). If it is down or a file has moved, fall back to the
+// copy bundled in index.html (FF_EMBED, refreshed weekly by factors.yml) so the reports still go out.
+async function frenchZip(name, embedKey) {
   const url = `https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/${name}_CSV.zip`;
-  const r = await fetch(url); if (!r.ok) throw new Error(`French ${name}: HTTP ${r.status}`);
-  const files = unzipSync(new Uint8Array(await r.arrayBuffer()));
-  return parseFrenchMonthly(strFromU8(Object.values(files)[0]));
+  let err;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const files = unzipSync(new Uint8Array(await r.arrayBuffer()));
+      const out = parseFrenchMonthly(strFromU8(Object.values(files)[0]));
+      if (Object.keys(out).length) return out;
+      throw new Error('no monthly rows in file');
+    } catch (e) { err = e; if (attempt === 0) await sleep(10000); }
+  }
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const block = html.match(new RegExp(`${embedKey}:\`([^\`]*)\``))?.[1];
+  const out = block ? parseFrenchMonthly(block) : {};
+  if (!Object.keys(out).length) throw new Error(`French ${name}: ${err.message}, and no bundled copy (${embedKey}) in index.html`);
+  log(`French ${name}: download failed (${err.message}); using the copy bundled in index.html`);
+  return out;
 }
 let lastTD = 0; const tdCache = {};
 async function prices(ticker) {
@@ -70,7 +85,7 @@ async function main() {
   if (!subs.length) return;
 
   log('Loading Fama-French factors from the Ken French Data Library...');
-  const [ff, mom] = [await frenchZip('F-F_Research_Data_5_Factors_2x3'), await frenchZip('F-F_Momentum_Factor')];
+  const [ff, mom] = [await frenchZip('F-F_Research_Data_5_Factors_2x3', 'ff5m'), await frenchZip('F-F_Momentum_Factor', 'momm')];
   const lastYM = Object.keys(ff).sort().pop();
   const ffThrough = new Date(Date.UTC(+lastYM.slice(0, 4), +lastYM.slice(4), 0)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
   log(`Factors through ${ffThrough}`);
