@@ -377,6 +377,7 @@ canvas{width:100%!important;display:block;}
       <div class="intro-card"><h4>1) Portfolio insights</h4><p>See what drives your returns, where your risk comes from, and what you're paying for each holding.</p></div>
       <div class="intro-card"><h4>2) Research</h4><p>Equity research. Opinion only, not investment advice.</p><a href="#" class="intro-link" onclick="openResearch();return false">Browse research →</a></div>
     </div>
+    <div class="intro-card" style="margin-top:20px"><h4>Email updates on your portfolio</h4><p>Pick one of your portfolios and get its performance, factor exposures, risk and headlines by email every week or month.</p><a href="#" class="intro-link" onclick="openReports();return false">Sign up for email updates →</a></div>
   </div></section>
 
   <section class="intro-sec"><div class="intro-inner">
@@ -385,7 +386,7 @@ canvas{width:100%!important;display:block;}
     <div class="src-row"><b>Prices</b><span><a href="https://twelvedata.com" target="_blank">Twelve Data</a>. Daily prices adjusted for splits and dividends, so returns include dividends (total return), and live quotes. Requested from your browser with your own free API key (800 requests a day, no credit card).</span></div>
     <div class="src-row"><b>Financial statements</b><span><a href="https://www.sec.gov/edgar" target="_blank">SEC EDGAR</a>. Revenue, earnings, cash flow and balance sheet figures from each company's 10-K and 10-Q filings, summed over the trailing twelve months. Valuation multiples combine these with the live price.</span></div>
     <div class="src-row"><b>Factor returns</b><span><a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html" target="_blank">Kenneth R. French Data Library</a>, Tuck School of Business at Dartmouth. Daily and monthly Fama-French and momentum factors, built into Skope and updated automatically each time a new month is published.</span></div>
-    <div class="src-row"><b>Your inputs</b><span>Your API key and saved tickers stay in this browser. Price requests go to Twelve Data.</span></div>
+    <div class="src-row"><b>Your inputs</b><span>Your API key and saved tickers stay in this browser. Price requests go to Twelve Data. If you sign up for email updates, your email and that portfolio’s holdings are stored to send them, and unsubscribing deletes both.</span></div>
   </div></section>
 
   <section class="intro-sec" style="border-bottom:none"><div class="intro-inner">
@@ -518,6 +519,15 @@ canvas{width:100%!important;display:block;}
         </div>
         <button class="ghost-btn" id="p-runBtn" onclick="runPortfolio()" style="width:100%">Analyze current weights</button>
         <div class="status-bar" style="margin-top:10px;margin-bottom:0"><div class="sdot" id="p-dot"></div><span id="p-status">Weights must add to 100%</span></div>
+      </div>
+      <div class="card" style="margin-top:14px" id="email-updates"><div class="card-title">Email updates</div>
+        <p class="bmp-fine" style="margin-bottom:10px">Get a portfolio's performance, factor exposures, risk and headlines by email.</p>
+        <div class="field" style="margin-bottom:8px"><label>Portfolio</label><select id="sub-pf" style="width:100%" onchange="subPfChanged()"></select></div>
+        <div id="sub-pf-info" style="font-size:11px;color:var(--text3);line-height:1.5;margin:-2px 0 10px"></div>
+        <div class="field" style="margin-bottom:8px"><label>Email</label><input type="email" id="sub-email" class="api-input" placeholder="you@example.com" autocomplete="email" style="width:100%;background:#fff" onkeydown="if(event.key==='Enter')subscribeReports()"></div>
+        <div style="display:flex;gap:8px"><select id="sub-freq" style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 8px;font-family:inherit;font-size:12.5px"><option value="weekly">Weekly (Mondays)</option><option value="monthly">Monthly</option></select><button class="run-btn" id="sub-btn" onclick="subscribeReports()" style="white-space:nowrap">Email me updates</button></div>
+        <div id="sub-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.5">You'll get a confirmation email first. One portfolio per email address: signing up again with another portfolio replaces the first. Every email has an unsubscribe link.</div>
       </div>
       <div class="wl-panel" style="position:static;margin-top:14px">
         <div class="wl-hdr"><span class="wl-ttl">Coverage List</span><span style="font-size:10px;color:var(--text3)">click + to add</span></div>
@@ -14853,7 +14863,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 function switchTab(tab){
   ['single','portfolio','compare'].forEach(t=>{document.getElementById(`pane-${t}`).style.display=t===tab?'block':'none';document.getElementById(`tab-${t}`).className='tab'+(t===tab?' active':'');});
   if(tab==='compare')renderChips();
-  if(tab==='portfolio'){renderPortWL();renderWeightRows();updateWeightBar();refreshPortPrices();}
+  if(tab==='portfolio'){renderPortWL();renderWeightRows();updateWeightBar();refreshPortPrices();renderSubPf();}
 }
 function setS(id,msg,st='active'){document.getElementById(`${id}-dot`).className='sdot '+st;document.getElementById(`${id}-status`).textContent=msg;}
 function upP(id,st,msg){const el=document.getElementById('prog-'+id);if(!el)return;el.querySelector('.dot').className='dot '+st;el.querySelector('.label').textContent=msg;}
@@ -15348,8 +15358,60 @@ const PF_KEY='skope_portfolios';
 let sb=null,USER=null,_pushT=null,_syncing=false;
 try{if(window.supabase)sb=window.supabase.createClient(SB_URL,SB_PUBLISHABLE,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}});}catch(e){console.warn('auth init',e);}
 
+// ── Email updates: pick a portfolio and sign up (double opt-in via the subscribe function) ──
+const SUB_MAX=25;
+function subHoldings(rows){
+  const r=(rows||[]).filter(x=>(+x.weight||0)>0),tot=r.reduce((s,x)=>s+(+x.weight),0);if(!r.length||!tot)return[];
+  const h=r.map(x=>({ticker:String(x.ticker).toUpperCase(),weight:Math.round(+x.weight/tot*10000)/100}));
+  const d=Math.round((100-h.reduce((s,x)=>s+x.weight,0))*100)/100;if(d){const big=h.reduce((b,x)=>x.weight>b.weight?x:b,h[0]);big.weight=Math.round((big.weight+d)*100)/100;}
+  return h;
+}
+function subSource(){
+  const v=document.getElementById('sub-pf')?.value||'';
+  if(v===''){if(PORT_MODE==='shares')syncWeightsFromShares();return{label:'Current holdings',rows:portfolioRows,bench:document.getElementById('p-bench').value};}
+  const p=loadPFs().find(x=>x.name===v);return p?{label:p.name,rows:p.rows,bench:p.bench||'SPY'}:{label:v,rows:[],bench:'SPY'};
+}
+function renderSubPf(){
+  const el=document.getElementById('sub-pf');if(!el)return;const cur=el.value,l=loadPFs();
+  el.innerHTML='<option value="">Current holdings (Step 2)</option>'+l.map(p=>`<option value="${escH(p.name)}">${escH(p.name)}</option>`).join('');
+  if([...el.options].some(o=>o.value===cur))el.value=cur;
+  const em=document.getElementById('sub-email');if(em&&!em.value&&typeof USER!=='undefined'&&USER&&USER.email)em.value=USER.email;
+  subPfChanged();
+}
+function subPfChanged(){
+  const info=document.getElementById('sub-pf-info');if(!info)return;const s=subSource(),h=subHoldings(s.rows);
+  info.textContent=!h.length?'No holdings with weights yet.':`${h.length} holding${h.length>1?'s':''} vs ${s.bench}: ${h.slice(0,6).map(x=>x.ticker+' '+x.weight.toFixed(0)+'%').join(', ')}${h.length>6?` +${h.length-6} more`:''}${h.length>SUB_MAX?` · updates support up to ${SUB_MAX}`:''}`;
+}
+async function subscribeReports(){
+  const msg=document.getElementById('sub-msg'),btn=document.getElementById('sub-btn'),show=(t,bad)=>{msg.textContent=t;msg.style.color=bad?'var(--red)':'var(--green)';};
+  const email=document.getElementById('sub-email').value.trim(),frequency=document.getElementById('sub-freq').value,s=subSource(),holdings=subHoldings(s.rows);
+  const benchmark=['SPY','QQQ','IWM'].includes(s.bench)?s.bench:'SPY';
+  if(!holdings.length)return show(s.label==='Current holdings'?'Add holdings in Step 2 first, or pick a saved portfolio.':'That portfolio has no holdings with weights.',1);
+  if(holdings.length>SUB_MAX)return show(`Email updates support up to ${SUB_MAX} holdings; this portfolio has ${holdings.length}.`,1);
+  if(!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email))return show('Enter a valid email address.',1);
+  btn.disabled=true;msg.style.color='var(--text3)';msg.textContent='Sending…';
+  try{const r=await fetch(`${SKOPE_API}/subscribe`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,frequency,benchmark,holdings})});
+    const d=await r.json().catch(()=>({}));if(!r.ok||d.error)show(d.error||'Something went wrong. Please try again.',1);else show(d.message||'Check your inbox to confirm.');}
+  catch(e){show('Could not reach the email service. Please try again.',1);}
+  btn.disabled=false;
+}
+function openReports(){
+  showApp();switchTab('portfolio');renderSubPf();
+  setTimeout(()=>{const c=document.getElementById('email-updates');if(!c)return;c.scrollIntoView({behavior:'smooth',block:'center'});const e=document.getElementById('sub-email');if(e&&!e.value)e.focus({preventScroll:true});},120);
+}
+// links in report emails open that portfolio: ?p=AAPL:25,MSFT:75&b=SPY
+function loadPortfolioFromLink(){
+  try{const q=new URLSearchParams(location.search),p=q.get('p');if(!p)return;
+    const rows=p.split(',').map(x=>{const[t,w]=x.split(':');const k=(t||'').toUpperCase().trim();return{ticker:k,name:k,weight:parseFloat(w)||0};}).filter(r=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(r.ticker)&&r.weight>0);
+    if(!rows.length)return;portfolioRows=rows;savePort();setPortMode('weights');
+    const b=q.get('b');if(['SPY','QQQ','IWM'].includes(b))document.getElementById('p-bench').value=b;
+    const m=document.getElementById('p-model');if(m)m.value='ff5mom';
+    showApp();switchTab('portfolio');toast('Loaded the portfolio from your email. Click "Analyze current weights" for the full analysis.');
+    history.replaceState(null,'',location.pathname);}catch(e){console.warn(e);}
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(loadPortfolioFromLink,60));
 function loadPFs(){try{return JSON.parse(localStorage.getItem(PF_KEY)||'[]');}catch{return[];}}
-function savePFs(l){try{localStorage.setItem(PF_KEY,JSON.stringify(l));}catch{}renderPFSelect();schedulePush();}
+function savePFs(l){try{localStorage.setItem(PF_KEY,JSON.stringify(l));}catch{}renderPFSelect();renderSubPf();schedulePush();}
 function renderPFSelect(){const el=document.getElementById('pf-select');if(!el)return;const l=loadPFs();
   el.innerHTML=`<option value="">${l.length?'Saved portfolios…':'No saved portfolios yet'}</option>`+l.map(p=>`<option value="${escH(p.name)}">${escH(p.name)} (${p.rows.length})</option>`).join('');}
 function saveNamedPortfolio(){
@@ -15445,6 +15507,7 @@ async function openAccount(){
       <button data-load="${escH(p.name)}">Open</button><button data-del="${escH(p.name)}">Delete</button></div>`).join(''):`<div class="acct-row"><span class="grow sub" style="font-size:13px">None yet. Build one on the Portfolio tab and click Save.</span></div>`}
     <div class="acct-h">Coverage list</div>
     <div class="acct-row"><span class="grow">${wl.length?escH(wl.map(i=>i.ticker).join(', ')):'<span class="sub" style="font-size:13px">No saved stocks yet.</span>'}</span></div>
+    <div class="acct-h">Email updates</div><div id="acct-subs"><div class="acct-row"><span class="grow sub">Loading…</span></div></div>
     ${keySectionHTML()}
     <div class="row" style="margin-top:22px"><button class="sec" id="acct-out">Sign out</button><button class="pri" id="acct-close">Close</button></div></div>`;
   document.body.appendChild(w);
@@ -15456,7 +15519,7 @@ async function openAccount(){
   const box=w.querySelector('#acct-subs');if(!box)return;
   const{data,error}=await sb.from('subscribers').select('id,frequency,benchmark,holdings,confirmed,last_sent_at').order('created_at');
   if(error){box.innerHTML=`<div class="acct-row"><span class="grow sub">Couldn't load your reports right now.</span></div>`;return;}
-  if(!data.length){box.innerHTML=`<div class="acct-row"><span class="grow sub" style="font-size:13px">No email reports. Set one up from the Portfolio tab.</span></div>`;return;}
+  if(!data.length){box.innerHTML=`<div class="acct-row"><span class="grow sub" style="font-size:13px">No email updates yet. Sign up from the Portfolio tab.</span></div>`;return;}
   box.innerHTML=data.map(r=>`<div class="acct-row"><span class="grow">${escH((r.holdings||[]).map(h=>h.ticker+' '+(+h.weight).toFixed(0)+'%').slice(0,6).join(', '))} vs ${escH(r.benchmark)}
       <span class="sub">${r.confirmed?(r.last_sent_at?'Last sent '+fDate(r.last_sent_at.slice(0,10)):'Confirmed, first report on the next scheduled Monday'):'Waiting for you to confirm by email'}</span></span>
       <select data-freq="${r.id}"><option value="weekly"${r.frequency==='weekly'?' selected':''}>Weekly</option><option value="monthly"${r.frequency==='monthly'?' selected':''}>Monthly</option></select>
