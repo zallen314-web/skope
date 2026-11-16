@@ -14,7 +14,7 @@ Deno.serve(async req => {
   const frequency = b.frequency === 'monthly' ? 'monthly' : 'weekly';
   const benchmark = ['SPY', 'QQQ', 'IWM'].includes(b.benchmark) ? b.benchmark : 'SPY';
   if (!EMAIL.test(email)) return json({ error: 'Please enter a valid email address.' }, 400);
-  if (!Array.isArray(b.holdings) || b.holdings.length < 1 || b.holdings.length > 15) return json({ error: 'Add between 1 and 15 holdings.' }, 400);
+  if (!Array.isArray(b.holdings) || b.holdings.length < 1 || b.holdings.length > 25) return json({ error: 'Add between 1 and 25 holdings.' }, 400);
   const holdings = b.holdings.map((h: any) => ({ ticker: String(h.ticker || '').trim().toUpperCase(), weight: Math.round(Number(h.weight) * 100) / 100 }));
   if (holdings.some((h: any) => !TICKER.test(h.ticker) || !(h.weight > 0))) return json({ error: 'Each holding needs a valid ticker and a weight above 0.' }, 400);
   if (new Set(holdings.map((h: any) => h.ticker)).size !== holdings.length) return json({ error: 'Each ticker can only appear once.' }, 400);
