@@ -15218,6 +15218,11 @@ const RK_COL={Market:'#1d4433',Size:'#4a78b5',Value:'#c8902e',Momentum:'#a8483a'
 function rkRows(monthly){const ff=fetchFF('ff5m',FF_FIELDS.ff5m),mo=fetchFF('momm',FF_FIELDS.momm),out=[];if(!ff||!mo)return out;
   for(const{date,ret}of monthly){const f=ff[date],m=mo[date];if(!f||!m||!isFinite(ret))continue;out.push({ym:date,ret,rf:f.rf,mkt:f.mkt_rf+f.rf,y:ret-f.rf,X:[f.mkt_rf,f.smb,f.hml,f.rmw,f.cma,m.mom]});}return out;}
 const rkCols=(rows,k)=>Array.from({length:k},(_,j)=>rows.map(r=>r.X[j]));
+// Year ticks for time-series charts: labels are years, only a few are shown (first point of a year, every `step` years)
+function yearAxis(dates,len){const yrs=[];for(let i=0;i<len;i++){const d=dates&&dates.length?dates[Math.max(0,Math.min(dates.length-1,i-(len-dates.length)))]:null;yrs.push(d?String(d).slice(0,4):'');}
+  const uniq=[...new Set(yrs.filter(Boolean))],step=Math.max(1,Math.ceil(uniq.length/5));
+  return{labels:yrs,x:{display:!!uniq.length,grid:{display:false},ticks:{autoSkip:false,maxRotation:0,color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},
+    callback:(v,i)=>{const y=yrs[i];if(!y||(i>0&&yrs[i-1]===y))return null;return (+y-+uniq[0])%step===0?y:null;}}}};}
 const ymLabel=ym=>new Date(+ym.slice(0,4),+ym.slice(4)-1,15).toLocaleDateString('en-US',{month:'short',year:'numeric'});
 const sgnPct=(v,d=1)=>v==null||!isFinite(v)?'—':`${v>=0?'+':'−'}${Math.abs(v*100).toFixed(d)}%`;
 
@@ -15814,25 +15819,25 @@ async function regress(ticker,model,outputsize,freq,ffData,momData,aqrData){
   const isD=freq==='daily',annF=isD?252:12;
   const nM=['ff5mom','kitchen'].includes(model),nA=['qmj','kitchen'].includes(model);
   const RF=0.0525/252;
-  let y=[],mkt=[],smb=[],hml=[],rmw=[],cma=[],mom=[],qmj=[],bab=[],rf=[];
+  let y=[],mkt=[],smb=[],hml=[],rmw=[],cma=[],mom=[],qmj=[],bab=[],rf=[],dts=[];
   if(ffData){
     const sm={};(isD?stock.daily:stock.monthly).forEach(r=>{sm[r.date]=r.ret;});
     for(const d of Object.keys(ffData).sort()){
       const ff=ffData[d],sr=sm[d];if(sr===undefined||!ff||!isFinite(ff.mkt_rf))continue;
       const ym=d.slice(0,6);if(nA&&!aqrData?.[ym])continue;if(nM&&!momData?.[d])continue;
-      y.push(sr-ff.rf);mkt.push(ff.mkt_rf);smb.push(ff.smb||0);hml.push(ff.hml||0);rmw.push(ff.rmw||0);cma.push(ff.cma||0);rf.push(ff.rf);
+      dts.push(d);y.push(sr-ff.rf);mkt.push(ff.mkt_rf);smb.push(ff.smb||0);hml.push(ff.hml||0);rmw.push(ff.rmw||0);cma.push(ff.cma||0);rf.push(ff.rf);
       mom.push(nM&&momData?.[d]?momData[d].mom:0);
       if(nA&&aqrData){const a=aqrData[ym]||{};qmj.push(a.qmj||0);bab.push(a.bab||0);}
     }
   }else{
     const spy=await fetchTwelvedata('SPY',outputsize);const mk={};spy.daily.forEach(r=>{mk[r.date]=r.ret;});
-    for(const{date,ret}of stock.daily){if(mk[date]===undefined)continue;y.push(ret-RF);mkt.push(mk[date]-RF);smb.push(0);hml.push(0);rmw.push(0);cma.push(0);rf.push(RF);mom.push(0);qmj.push(0);bab.push(0);}
+    for(const{date,ret}of stock.daily){if(mk[date]===undefined)continue;dts.push(date);y.push(ret-RF);mkt.push(mk[date]-RF);smb.push(0);hml.push(0);rmw.push(0);cma.push(0);rf.push(RF);mom.push(0);qmj.push(0);bab.push(0);}
   }
   if(y.length<20)throw new Error(`Only ${y.length} aligned obs for ${ticker}`);
   const Xm={capm:[mkt],ff3:[mkt,smb,hml],ff5:[mkt,smb,hml,rmw,cma],ff5mom:[mkt,smb,hml,rmw,cma,mom],qmj:[mkt,smb,hml,rmw,cma,qmj],kitchen:[mkt,smb,hml,rmw,cma,mom,qmj,bab]};
   const result=ols(y,Xm[model]);
   const rawRets=y.map((e,i)=>e+rf[i]),mktRaw=mkt.map((e,i)=>e+rf[i]);
-  return{result,rawRets,mktRaw,st:dStat(rawRets,annF,rf),annF,meta:{name:stock.name,exchange:stock.exchange,type:stock.type}};
+  return{result,rawRets,mktRaw,dates:dts,st:dStat(rawRets,annF,rf),annF,meta:{name:stock.name,exchange:stock.exchange,type:stock.type}};
 }
 
 // ── Individual ────────────────────────────────────────────────────────────────
@@ -15889,7 +15894,7 @@ async function runSingle(){
 
     upP('reg','loading','OLS...');
     setS('s','Running regression...','active');
-    const{result,rawRets,mktRaw,st,annF}=await regress(ticker,model,outputsize,freq,ffData,momData,aqrData);
+    const{result,rawRets,mktRaw,dates,st,annF}=await regress(ticker,model,outputsize,freq,ffData,momData,aqrData);window.LAST_SDATES=dates;
     upP('reg','ok',`${result.n} obs · R²=${(result.r2*100).toFixed(1)}%`);
 
     const saved=loadWL().some(i=>i.ticker===ticker);
@@ -15971,7 +15976,7 @@ function renderSingle(ticker,model,result,rawRets,mktRaw,st,annF,proxy,freq){
   const b0=result.betas[0],mMin=Math.min(...mktRaw)*100,mMax=Math.max(...mktRaw)*100;
   new Chart(document.getElementById('s-scat').getContext('2d'),{type:'scatter',data:{datasets:[{label:ticker,data:mktRaw.map((m,i)=>({x:+(m*100).toFixed(4),y:+(rawRets[i]*100).toFixed(4)})),backgroundColor:'rgba(29,68,51,0.15)',borderColor:'rgba(29,68,51,0.3)',pointRadius:2.5},{label:`SCL β=${b0.toFixed(3)}`,data:[{x:mMin,y:result.alpha*100+b0*mMin},{x:mMax,y:result.alpha*100+b0*mMax}],type:'line',borderColor:'#111111',borderWidth:1.5,pointRadius:0,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:12}}},scales:{x:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9}}},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9}}}}}});
   const cS=[1],cM=[1];rawRets.forEach((r,i)=>{cS.push(cS[cS.length-1]*(1+r));cM.push(cM[cM.length-1]*(1+mktRaw[i]));});
-  new Chart(document.getElementById('s-cum').getContext('2d'),{type:'line',data:{labels:cS.map((_,i)=>i),datasets:[{label:ticker,data:cS,borderColor:'#1d4433',borderWidth:2,pointRadius:0,tension:0.2,fill:false},{label:'Market',data:cM,borderColor:'#8b908c',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0.2,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:12}}},scales:{x:{display:false},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(2)+'x'}}}}});
+  const sAx=yearAxis(window.LAST_SDATES,cS.length);new Chart(document.getElementById('s-cum').getContext('2d'),{type:'line',data:{labels:sAx.labels,datasets:[{label:ticker,data:cS,borderColor:'#1d4433',borderWidth:2,pointRadius:0,tension:0.2,fill:false},{label:'Market',data:cM,borderColor:'#8b908c',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0.2,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:12}}},scales:{x:sAx.x,y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(2)+'x'}}}}});
   initDist('s',rawRets,result.resid,freq);
   document.getElementById('s-subtabs').style.display='flex';setSubTab(SUBTAB);
 }
@@ -16025,7 +16030,7 @@ async function runPortfolio(){
     upP('reg','ok',`${result.n} obs · R²=${(result.r2*100).toFixed(1)}%`);
     setS('p',`Portfolio · R²=${(result.r2*100).toFixed(1)}% · α=${pct(result.alpha*annF)}${stars(result.alphaPVal)}`,'done');
     window.LAST_PORT={weights,model,result,annF,factors:Xm2[model],bench,freq,bBeta};
-    renderPortResults(weights,model,result,pA,mktRaw,st,benchSt,benchRets,annF,!ffData,freq,bench);
+    window.LAST_PDATES=bi.map(i=>dts[i]);renderPortResults(weights,model,result,pA,mktRaw,st,benchSt,benchRets,annF,!ffData,freq,bench);
     renderPortRisk(weights,outputsize,freq,bench).catch(e=>console.warn('risk',e));
     renderPortSnapshot(weights,outputsize).catch(e=>{const b=document.getElementById('p-snap-body');if(b)b.innerHTML=`<div class="warn">Couldn't load the snapshot: ${escH(e.message)}</div>`;});
     renderResearchTab('p-research',weights.map(w=>w.ticker),'your holdings').catch(e=>console.warn('research',e));
@@ -16149,13 +16154,13 @@ function renderPortResults(weights,model,result,rawRets,mktRaw,st,benchSt,benchR
     <div class="footer-note">Portfolio: ${weights.map(w=>`${w.ticker} ${(w.w*100).toFixed(1)}%`).join(' · ')} &nbsp;|&nbsp; ${ML[model]} OLS on blended returns &nbsp;|&nbsp; Prices: Twelvedata &nbsp;|&nbsp; <span class="stag sff">French</span> bundled &nbsp;|&nbsp; * p&lt;0.10 ** p&lt;0.05 *** p&lt;0.01</div>`;
   new Chart(document.getElementById('p-donut').getContext('2d'),{type:'doughnut',data:{labels:weights.map(w=>w.ticker),datasets:[{data:weights.map(w=>w.w*100),backgroundColor:weights.map((_,i)=>PAL[i%PAL.length]),borderWidth:2,borderColor:'#fff'}]},options:{responsive:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed.toFixed(1)}%`}}}}});
   const cP=[1],cB=[1];rawRets.slice(0,mL).forEach((r,i)=>{cP.push(cP[cP.length-1]*(1+r));cB.push(cB[cB.length-1]*(1+benchRets[i]));});
-  new Chart(document.getElementById('p-cum').getContext('2d'),{type:'line',data:{labels:cP.map((_,i)=>i),datasets:[{label:'Portfolio',data:cP,borderColor:'#1d4433',borderWidth:2,pointRadius:0,tension:0.2,fill:false},{label:bench,data:cB,borderColor:'#8b908c',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0.2,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:12}}},scales:{x:{display:false},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(2)+'x'}}}}});
+  const pAx=yearAxis(window.LAST_PDATES,cP.length);new Chart(document.getElementById('p-cum').getContext('2d'),{type:'line',data:{labels:pAx.labels,datasets:[{label:'Portfolio',data:cP,borderColor:'#1d4433',borderWidth:2,pointRadius:0,tension:0.2,fill:false},{label:bench,data:cB,borderColor:'#8b908c',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0.2,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:12}}},scales:{x:pAx.x,y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(2)+'x'}}}}});
   const b0=result.betas[0],mMin=Math.min(...mktRaw)*100,mMax=Math.max(...mktRaw)*100;
   new Chart(document.getElementById('p-scat').getContext('2d'),{type:'scatter',data:{datasets:[{label:'Portfolio',data:mktRaw.map((m,i)=>({x:+(m*100).toFixed(4),y:+(rawRets[i]*100).toFixed(4)})),backgroundColor:'rgba(29,68,51,0.15)',borderColor:'rgba(29,68,51,0.3)',pointRadius:2},{label:`β=${b0.toFixed(3)}`,data:[{x:mMin,y:result.alpha*100+b0*mMin},{x:mMax,y:result.alpha*100+b0*mMax}],type:'line',borderColor:'#111111',borderWidth:1.5,pointRadius:0,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:12}}},scales:{x:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9}}},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9}}}}}});
   const winSz=Math.min(60,Math.floor(rawRets.length/4)),rollVol=[];for(let i=winSz;i<=rawRets.length;i++){const w2=rawRets.slice(i-winSz,i),m=w2.reduce((a,b)=>a+b,0)/winSz,v=w2.reduce((a,b)=>a+(b-m)**2,0)/(winSz-1);rollVol.push(+(Math.sqrt(v*annF)*100).toFixed(2));}
   new Chart(document.getElementById('p-vol').getContext('2d'),{type:'line',data:{labels:rollVol.map((_,i)=>i),datasets:[{label:`${winSz}-${freq==='monthly'?'month':'day'} rolling vol (annualized)`,data:rollVol,borderColor:'#111111',borderWidth:1.5,pointRadius:0,tension:0.2,fill:true,backgroundColor:'rgba(17,17,17,0.08)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:12}}},scales:{x:{display:false},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(1)+'%'}}}}});
   let pk=1,nv=1;const dd=[];rawRets.forEach(r=>{nv*=(1+r);if(nv>pk)pk=nv;dd.push(+((nv-pk)/pk*100).toFixed(3));});
-  new Chart(document.getElementById('p-dd').getContext('2d'),{type:'line',data:{labels:dd.map((_,i)=>i),datasets:[{label:'Drawdown',data:dd,borderColor:'#a12a2a',borderWidth:1.5,pointRadius:0,tension:0.2,fill:true,backgroundColor:'rgba(161,42,42,0.1)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:12}}},scales:{x:{display:false},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(1)+'%'}}}}});
+  const dAx=yearAxis(window.LAST_PDATES,dd.length);new Chart(document.getElementById('p-dd').getContext('2d'),{type:'line',data:{labels:dAx.labels,datasets:[{label:'Drawdown',data:dd,borderColor:'#a12a2a',borderWidth:1.5,pointRadius:0,tension:0.2,fill:true,backgroundColor:'rgba(161,42,42,0.1)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:12}}},scales:{x:dAx.x,y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(1)+'%'}}}}});
   initDist('p',rawRets,result.resid,freq);
   setPortTab(PTAB);
 }
@@ -16279,7 +16284,7 @@ function renderComparison(results,model,freq){
   new Chart(document.getElementById('c-rr').getContext('2d'),{type:'scatter',data:{datasets:sorted.map((r,i)=>({label:r.ticker,data:[{x:+(r.st.annStd*100).toFixed(3),y:+(r.st.annMean*100).toFixed(3)}],backgroundColor:cols[i],borderColor:cols[i],pointRadius:7,pointHoverRadius:9}))},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:10,padding:8}},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: σ=${ctx.raw.x.toFixed(1)}% μ=${ctx.raw.y.toFixed(1)}%`}}},scales:{x:{title:{display:true,text:'Ann. Vol (%)',color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:10}},grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9}}},y:{title:{display:true,text:'Ann. Return (%)',color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:10}},grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9}}}}}});
   new Chart(document.getElementById('c-sh').getContext('2d'),{type:'bar',data:{labels:tkL,datasets:[{data:sorted.map(r=>+r.st.sharpe.toFixed(3)),backgroundColor:sorted.map(r=>r.st.sharpe>0?'rgba(29,68,51,0.7)':'rgba(161,42,42,0.7)'),borderWidth:1}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:11}},grid:{color:'#e6e8e5'}},y:{ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(2)},grid:{color:'#e6e8e5'}}}}});
   const mL2=Math.min(...results.map(r=>r.rawRets.length));
-  new Chart(document.getElementById('c-cum').getContext('2d'),{type:'line',data:{labels:Array(mL2+1).fill(0).map((_,i)=>i),datasets:sorted.map((r,i)=>{const c=[1];r.rawRets.slice(0,mL2).forEach(rt=>c.push(c[c.length-1]*(1+rt)));return{label:r.ticker,data:c,borderColor:cols[i],borderWidth:r.ticker==='SPY'?2.5:1.8,borderDash:r.ticker==='SPY'?[6,4]:[],pointRadius:0,tension:0.2,fill:false};})},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:14,padding:10}}},scales:{x:{display:false},y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(2)+'x'}}}}});
+  const cAx=yearAxis((sorted.find(r=>r.rawRets.length===mL2)||sorted[0]).dates,mL2+1);new Chart(document.getElementById('c-cum').getContext('2d'),{type:'line',data:{labels:cAx.labels,datasets:sorted.map((r,i)=>{const c=[1];r.rawRets.slice(0,mL2).forEach(rt=>c.push(c[c.length-1]*(1+rt)));return{label:r.ticker,data:c,borderColor:cols[i],borderWidth:r.ticker==='SPY'?2.5:1.8,borderDash:r.ticker==='SPY'?[6,4]:[],pointRadius:0,tension:0.2,fill:false};})},options:{responsive:true,plugins:{legend:{labels:{color:'#3e4340',font:{family:"'Inter',sans-serif",size:10},boxWidth:14,padding:10}}},scales:{x:cAx.x,y:{grid:{color:'#e6e8e5'},ticks:{color:'#6a6f6b',font:{family:"'Inter',sans-serif",size:9},callback:v=>v.toFixed(2)+'x'}}}}});
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
